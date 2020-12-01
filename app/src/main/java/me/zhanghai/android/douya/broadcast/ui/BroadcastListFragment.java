@@ -5,18 +5,16 @@
 
 package me.zhanghai.android.douya.broadcast.ui;
 
+import android.app.Activity;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.view.View;
+import androidx.annotation.Nullable;
 
 import butterknife.BindDimen;
-import butterknife.ButterKnife;
 import me.zhanghai.android.douya.R;
-import me.zhanghai.android.douya.broadcast.content.BroadcastListResource;
-import me.zhanghai.android.douya.link.NotImplementedManager;
+import me.zhanghai.android.douya.broadcast.content.TimelineBroadcastListResource;
 import me.zhanghai.android.douya.util.FragmentUtils;
 
-public class BroadcastListFragment extends BaseBroadcastListFragment {
+public class BroadcastListFragment extends BaseTimelineBroadcastListFragment {
 
     private static final String KEY_PREFIX = BroadcastListFragment.class.getName() + '.';
 
@@ -32,9 +30,9 @@ public class BroadcastListFragment extends BaseBroadcastListFragment {
     public static BroadcastListFragment newInstance(String userIdOrUid, String topic) {
         //noinspection deprecation
         BroadcastListFragment fragment = new BroadcastListFragment();
-        Bundle arguments = FragmentUtils.ensureArguments(fragment);
-        arguments.putString(EXTRA_USER_ID_OR_UID, userIdOrUid);
-        arguments.putString(EXTRA_TOPIC, topic);
+        FragmentUtils.getArgumentsBuilder(fragment)
+                .putString(EXTRA_USER_ID_OR_UID, userIdOrUid)
+                .putString(EXTRA_TOPIC, topic);
         return fragment;
     }
 
@@ -53,21 +51,18 @@ public class BroadcastListFragment extends BaseBroadcastListFragment {
     }
 
     @Override
-    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-
-        ButterKnife.bind(this, view);
-
-        setPaddingTop(mToolbarHeight);
+    protected int getExtraPaddingTop() {
+        return mToolbarHeight;
     }
 
     @Override
-    protected BroadcastListResource onAttachBroadcastListResource() {
-        return BroadcastListResource.attachTo(mUserIdOrUid, mTopic, this);
+    protected TimelineBroadcastListResource onAttachResource() {
+        return TimelineBroadcastListResource.attachTo(mUserIdOrUid, mTopic, this);
     }
 
     @Override
     protected void onSendBroadcast() {
-        NotImplementedManager.sendBroadcast(mTopic, getActivity());
+        Activity activity = getActivity();
+        activity.startActivity(SendBroadcastActivity.makeTopicIntent(mTopic, activity));
     }
 }

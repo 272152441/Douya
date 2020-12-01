@@ -7,66 +7,52 @@ package me.zhanghai.android.douya.broadcast.content;
 
 import android.accounts.Account;
 import android.os.Handler;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
+
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.List;
 
 import me.zhanghai.android.douya.account.util.AccountUtils;
-import me.zhanghai.android.douya.network.api.info.apiv2.Broadcast;
+import me.zhanghai.android.douya.eventbus.BroadcastRebroadcastedEvent;
+import me.zhanghai.android.douya.eventbus.BroadcastSentEvent;
+import me.zhanghai.android.douya.network.api.ApiRequest;
+import me.zhanghai.android.douya.network.api.info.frodo.Broadcast;
+import me.zhanghai.android.douya.network.api.info.frodo.TimelineList;
 import me.zhanghai.android.douya.settings.info.Settings;
-import me.zhanghai.android.douya.util.Callback;
 import me.zhanghai.android.douya.util.FragmentUtils;
 
-public class HomeBroadcastListResource extends BroadcastListResource {
+public class HomeBroadcastListResource extends TimelineBroadcastListResource {
 
     private static final String FRAGMENT_TAG_DEFAULT = HomeBroadcastListResource.class.getName();
 
     private final Handler mHandler = new Handler();
+    private boolean mStopped;
 
     private Account mAccount;
-
-    private boolean mStopped;
+    private boolean mLoadingFromCache;
 
     private static HomeBroadcastListResource newInstance() {
         //noinspection deprecation
-        HomeBroadcastListResource resource = new HomeBroadcastListResource();
-        resource.setArguments(null, null);
-        return resource;
-    }
-
-    public static HomeBroadcastListResource attachTo(FragmentActivity activity, String tag,
-                                                     int requestCode) {
-        return attachTo(activity, tag, true, null, requestCode);
-    }
-
-    public static HomeBroadcastListResource attachTo(FragmentActivity activity) {
-        return attachTo(activity, FRAGMENT_TAG_DEFAULT, REQUEST_CODE_INVALID);
+        return new HomeBroadcastListResource().setArguments();
     }
 
     public static HomeBroadcastListResource attachTo(Fragment fragment, String tag,
                                                      int requestCode) {
-        return attachTo(fragment.getActivity(), tag, false, fragment, requestCode);
+        FragmentActivity activity = fragment.getActivity();
+        HomeBroadcastListResource instance = FragmentUtils.findByTag(activity, tag);
+        if (instance == null) {
+            instance = newInstance();
+            FragmentUtils.add(instance, activity, tag);
+        }
+        instance.setTarget(fragment, requestCode);
+        return instance;
     }
 
     public static HomeBroadcastListResource attachTo(Fragment fragment) {
         return attachTo(fragment, FRAGMENT_TAG_DEFAULT, REQUEST_CODE_INVALID);
-    }
-
-    private static HomeBroadcastListResource attachTo(FragmentActivity activity, String tag,
-                                                      boolean targetAtActivity,
-                                                      Fragment targetFragment, int requestCode) {
-        HomeBroadcastListResource resource = FragmentUtils.findByTag(activity, tag);
-        if (resource == null) {
-            resource = newInstance();
-            if (targetAtActivity) {
-                resource.targetAtActivity(requestCode);
-            } else {
-                resource.targetAtFragment(targetFragment, requestCode);
-            }
-            FragmentUtils.add(resource, activity, tag);
-        }
-        return resource;
     }
 
     /**
@@ -74,6 +60,11 @@ public class HomeBroadcastListResource extends BroadcastListResource {
      */
     @SuppressWarnings("deprecation")
     public HomeBroadcastListResource() {}
+
+    protected HomeBroadcastListResource setArguments() {
+        super.setArguments(null, null);
+        return this;
+    }
 
     @Override
     public void onStart() {
@@ -88,68 +79,101 @@ public class HomeBroadcastListResource extends BroadcastListResource {
 
         mStopped = true;
 
-        List<Broadcast> broadcastList = get();
-        if (broadcastList != null && broadcastList.size() > 0) {
-            saveToCache(broadcastList);
+        if (!isEmpty()) {
+            saveToCache(get());
         }
     }
 
     @Override
-    protected void loadOnStart() {
+    protected boolean shouldIgnoreStartRequest() {
+        return mLoadingFromCache;
+    }
+
+    @Override
+    public boolean isLoading() {
+        return super.isLoading() || mLoadingFromCache;
+    }
+
+    @Override
+    protected void onLoadOnStart() {
         loadFromCache();
     }
 
     private void loadFromCache() {
 
-        if (isLoading()) {
-            return;
-        }
+        mLoadingFromCache = true;
 
-        setLoading(true);
+        mAccount = AccountUtils.getActiveAccount();
+        HomeBroadcastListCache.get(mAccount, mHandler, this::onLoadFromCacheFinished,
+                getActivity());
 
-        onStartLoad();
-        HomeBroadcastListCache.get(mAccount, mHandler, new Callback<List<Broadcast>>() {
-            @Override
-            public void onValue(List<Broadcast> broadcastList) {
-                onLoadFromCacheComplete(broadcastList);
-            }
-        }, getActivity());
+        onLoadStarted();
     }
 
     @Override
-    protected void onStartLoad() {
-        super.onStartLoad();
-
-        mAccount = AccountUtils.getActiveAccount(getContext());
+    protected ApiRequest<TimelineList> onCreateRequest(boolean more, int count) {
+        mAccount = AccountUtils.getActiveAccount();
+        return super.onCreateRequest(more, count);
     }
 
-    private void onLoadFromCacheComplete(List<Broadcast> broadcastList) {
+    private void onLoadFromCacheFinished(List<Broadcast> broadcastList) {
 
-        setLoading(false);
+        mLoadingFromCache = false;
 
         if (mStopped) {
             return;
         }
 
-        boolean hasCache = broadcastList != null && broadcastList.size() > 0;
+        boolean hasCache = broadcastList != null && !broadcastList.isEmpty();
         if (hasCache) {
-            set(broadcastList);
+            setAndNotifyListener(broadcastList, true);
         }
 
-        if (!hasCache || Settings.AUTO_REFRESH_HOME.getValue(getActivity())) {
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    if (mStopped) {
-                        return;
-                    }
-                    load(false);
+        if (!hasCache || Settings.AUTO_REFRESH_HOME.getValue()) {
+            mHandler.post(() -> {
+                if (mStopped) {
+                    return;
                 }
+                HomeBroadcastListResource.super.onLoadOnStart();
             });
         }
     }
 
     private void saveToCache(List<Broadcast> broadcastList) {
         HomeBroadcastListCache.put(mAccount, broadcastList, getActivity());
+    }
+
+    @Subscribe(threadMode = ThreadMode.POSTING)
+    public void onBroadcastSent(BroadcastSentEvent event) {
+
+        if (event.isFromMyself(this)) {
+            return;
+        }
+
+        prependBroadcast(event.broadcast);
+    }
+
+    @Subscribe(threadMode = ThreadMode.POSTING)
+    public void onBroadcastRebroadcasted(BroadcastRebroadcastedEvent event) {
+
+        if (event.isFromMyself(this)) {
+            return;
+        }
+
+        prependBroadcast(event.rebroadcastBroadcast);
+    }
+
+    private void prependBroadcast(Broadcast broadcast) {
+        List<Broadcast> broadcastList = get();
+        broadcastList.add(0, broadcast);
+        getListener().onBroadcastInserted(getRequestCode(), 0, broadcast);
+    }
+
+    private Listener getListener() {
+        return (Listener) getTarget();
+    }
+
+    public interface Listener extends TimelineBroadcastListResource.Listener {
+        void onBroadcastInserted(int requestCode, int position, Broadcast insertedBroadcast);
     }
 }

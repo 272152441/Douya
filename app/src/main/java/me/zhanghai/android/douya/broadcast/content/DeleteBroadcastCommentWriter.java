@@ -7,19 +7,17 @@ package me.zhanghai.android.douya.broadcast.content;
 
 import android.content.Context;
 
-import com.android.volley.VolleyError;
-
 import me.zhanghai.android.douya.R;
-import me.zhanghai.android.douya.content.ResourceWriter;
+import me.zhanghai.android.douya.content.RequestResourceWriter;
 import me.zhanghai.android.douya.eventbus.CommentDeletedEvent;
 import me.zhanghai.android.douya.eventbus.EventBusUtils;
-import me.zhanghai.android.douya.network.Request;
 import me.zhanghai.android.douya.network.api.ApiError;
-import me.zhanghai.android.douya.network.api.ApiRequests;
+import me.zhanghai.android.douya.network.api.ApiRequest;
+import me.zhanghai.android.douya.network.api.ApiService;
 import me.zhanghai.android.douya.util.LogUtils;
 import me.zhanghai.android.douya.util.ToastUtils;
 
-class DeleteBroadcastCommentWriter extends ResourceWriter<DeleteBroadcastCommentWriter, Boolean> {
+class DeleteBroadcastCommentWriter extends RequestResourceWriter<DeleteBroadcastCommentWriter, Void> {
 
     private long mBroadcastId;
     private long mCommentId;
@@ -41,12 +39,12 @@ class DeleteBroadcastCommentWriter extends ResourceWriter<DeleteBroadcastComment
     }
 
     @Override
-    protected Request<Boolean> onCreateRequest() {
-        return ApiRequests.newDeleteBroadcastCommentRequest(mBroadcastId, mCommentId, getContext());
+    protected ApiRequest<Void> onCreateRequest() {
+        return ApiService.getInstance().deleteBroadcastComment(mBroadcastId, mCommentId);
     }
 
     @Override
-    public void onResponse(Boolean response) {
+    public void onResponse(Void response) {
 
         ToastUtils.show(R.string.broadcast_comment_delete_successful, getContext());
 
@@ -56,7 +54,7 @@ class DeleteBroadcastCommentWriter extends ResourceWriter<DeleteBroadcastComment
     }
 
     @Override
-    public void onErrorResponse(VolleyError error) {
+    public void onErrorResponse(ApiError error) {
 
         LogUtils.e(error.toString());
         Context context = getContext();

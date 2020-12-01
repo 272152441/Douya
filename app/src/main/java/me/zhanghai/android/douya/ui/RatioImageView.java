@@ -5,47 +5,36 @@
 
 package me.zhanghai.android.douya.ui;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.os.Build;
 import android.util.AttributeSet;
-import android.widget.ImageView;
-
-import me.zhanghai.android.douya.util.MathUtils;
 
 /**
  * An ImageView that measures with a ratio. Also sets scaleType to centerCrop.
  */
-public class RatioImageView extends ImageView {
+public class RatioImageView extends AdjustViewBoundsImageView {
 
     private float mRatio;
 
     public RatioImageView(Context context) {
         super(context);
 
-        init(getContext(), null, 0, 0);
+        init();
     }
 
     public RatioImageView(Context context, AttributeSet attrs) {
         super(context, attrs);
 
-        init(getContext(), attrs, 0, 0);
+        init();
     }
 
     public RatioImageView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
 
-        init(getContext(), attrs, defStyleAttr, 0);
+        init();
     }
 
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    public RatioImageView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
-        super(context, attrs, defStyleAttr, defStyleRes);
-
-        init(getContext(), attrs, defStyleAttr, defStyleRes);
-    }
-
-    private void init(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    private void init() {
         setScaleType(ScaleType.CENTER_CROP);
     }
 
@@ -72,21 +61,17 @@ public class RatioImageView extends ImageView {
             if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.EXACTLY) {
                 int height = MeasureSpec.getSize(heightMeasureSpec);
                 int width = Math.round(mRatio * height);
-                if (Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN) {
-                    width = MathUtils.clamp(width, getMinimumWidth(), getMaxWidth());
-                    if (getAdjustViewBounds()) {
-                        width = Math.min(width, getMeasuredWidth());
-                    }
+                width = Math.max(width, getSuggestedMinimumWidth());
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                    width = Math.min(width, getMaxWidth());
                 }
                 widthMeasureSpec = MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY);
             } else {
                 int width = MeasureSpec.getSize(widthMeasureSpec);
                 int height = Math.round(width / mRatio);
-                if (Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN) {
-                    height = MathUtils.clamp(height, getMinimumHeight(), getMaxHeight());
-                    if (getAdjustViewBounds()) {
-                        height = Math.min(height, getMeasuredHeight());
-                    }
+                height = Math.max(height, getSuggestedMinimumHeight());
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                    height = Math.min(height, getMaxHeight());
                 }
                 heightMeasureSpec = MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY);
             }

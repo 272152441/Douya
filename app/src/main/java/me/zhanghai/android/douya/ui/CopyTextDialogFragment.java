@@ -6,13 +6,12 @@
 package me.zhanghai.android.douya.ui;
 
 import android.app.Dialog;
-import android.content.DialogInterface;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatDialogFragment;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatDialogFragment;
 import android.widget.TextView;
 
 import me.zhanghai.android.douya.R;
@@ -23,7 +22,7 @@ public class CopyTextDialogFragment extends AppCompatDialogFragment {
 
     private static final String KEY_PREFIX = CopyTextDialogFragment.class.getName() + '.';
 
-    public static final String EXTRA_TEXT = KEY_PREFIX + "text";
+    private static final String EXTRA_TEXT = KEY_PREFIX + "text";
 
     private String mText;
 
@@ -35,7 +34,7 @@ public class CopyTextDialogFragment extends AppCompatDialogFragment {
     public static CopyTextDialogFragment newInstance(String text) {
         //noinspection deprecation
         CopyTextDialogFragment fragment = new CopyTextDialogFragment();
-        FragmentUtils.ensureArguments(fragment)
+        FragmentUtils.getArgumentsBuilder(fragment)
                 .putString(EXTRA_TEXT, text);
         return fragment;
     }
@@ -53,12 +52,7 @@ public class CopyTextDialogFragment extends AppCompatDialogFragment {
         return new AlertDialog.Builder(getActivity(), getTheme())
                 .setMessage(mText)
                 .setPositiveButton(R.string.copy_to_clipboard,
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                ClipboardUtils.copyText(null, mText, getActivity());
-                            }
-                        })
+                        (dialog, which) -> ClipboardUtils.copyText(null, mText, getActivity()))
                 .create();
     }
 

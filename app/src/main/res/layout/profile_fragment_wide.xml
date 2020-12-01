@@ -33,6 +33,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:background="?colorPrimary"
+                android:clipChildren="false"
                 android:orientation="vertical"
                 android:theme="?actionBarTheme">
 
@@ -49,26 +50,18 @@
             android:elevation="@dimen/appbar_elevation"
             android:theme="?actionBarTheme">
 
+            <!-- NOTE: Theme will be reset back to Theme.Douya in ProfileDataAdapter. -->
             <me.zhanghai.android.douya.ui.FlexibleSpaceContentRecyclerView
                 android:id="@+id/content"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:paddingLeft="@dimen/card_list_horizontal_padding"
                 android:paddingRight="@dimen/card_list_horizontal_padding"
+                android:paddingTop="@dimen/card_vertical_space_half"
+                android:paddingBottom="@dimen/card_vertical_space_half"
                 android:clipToPadding="false"
                 android:scrollbars="vertical"
-                android:scrollbarStyle="outsideOverlay"
-                android:theme="@style/Theme.Douya" />
-
-            <TextView
-                android:id="@+id/error"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_marginLeft="@dimen/card_content_horizontal_margin"
-                android:layout_marginRight="@dimen/card_content_horizontal_margin"
-                android:text="@string/load_error"
-                android:textAppearance="@style/TextAppearance.AppCompat.Subhead" />
+                android:scrollbarStyle="outsideOverlay" />
         </me.zhanghai.android.douya.profile.ui.ProfileContentLayout>
     </FrameLayout>
 </me.zhanghai.android.douya.profile.ui.ProfileLayout>

@@ -10,6 +10,8 @@ import android.os.Parcelable;
 
 import java.util.ArrayList;
 
+import me.zhanghai.android.douya.network.api.info.frodo.Comment;
+
 public class CommentList extends BaseList implements Parcelable {
 
     public ArrayList<Comment> comments = new ArrayList<>();
@@ -30,7 +32,7 @@ public class CommentList extends BaseList implements Parcelable {
     protected CommentList(Parcel in) {
         super(in);
 
-        this.comments = in.createTypedArrayList(Comment.CREATOR);
+        comments = in.createTypedArrayList(Comment.CREATOR);
     }
 
     @Override

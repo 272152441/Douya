@@ -8,6 +8,7 @@
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/container"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -26,21 +27,21 @@
             android:layout_marginRight="@dimen/card_activity_horizontal_margin"
             android:layout_marginTop="@dimen/toolbar_height"
             android:layout_marginBottom="@dimen/toolbar_height"
-            android:background="@color/grey_100">
+            android:background="?android:colorBackground">
 
-            <me.zhanghai.android.douya.ui.FriendlySwipeRefreshLayout
+            <androidx.swiperefreshlayout.widget.FriendlySwipeRefreshLayout
                 android:id="@+id/swipe_refresh"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
 
-                <android.support.v7.widget.RecyclerView
+                <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/broadcast_comment_list"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:clipToPadding="false"
                     android:scrollbars="vertical"
                     android:scrollbarStyle="outsideOverlay" />
-            </me.zhanghai.android.douya.ui.FriendlySwipeRefreshLayout>
+            </androidx.swiperefreshlayout.widget.FriendlySwipeRefreshLayout>
 
             <me.zhanghai.android.materialprogressbar.MaterialProgressBar
                 android:id="@+id/progress"
@@ -67,7 +68,7 @@
         android:layout_marginRight="@dimen/card_activity_horizontal_margin"
         android:paddingLeft="@dimen/toolbar_edit_left_margin"
         android:paddingRight="@dimen/toolbar_button_right_margin"
-        android:background="@color/card_background_light"
+        android:background="?colorBackgroundFloating"
         android:clickable="true"
         android:elevation="@dimen/appbar_elevation"
         android:orientation="horizontal">
@@ -84,7 +85,7 @@
             <requestFocus />
         </me.zhanghai.android.materialedittext.MaterialEditText>
 
-        <ImageButton
+        <me.zhanghai.android.douya.ui.GetOnLongClickListenerImageButton
             android:id="@+id/send"
             android:layout_width="@dimen/touch_target_size"
             android:layout_height="@dimen/touch_target_size"
@@ -92,8 +93,9 @@
             android:background="?selectableItemBackgroundBorderless"
             android:contentDescription="@string/broadcast_send_comment"
             android:padding="@dimen/icon_button_padding"
-            android:src="@drawable/send_icon_black_24dp"
-            android:tint="?colorAccent" />
+            android:src="@drawable/send_icon_white_24dp"
+            app:tint="?colorControlActivated"
+            tools:ignore="MissingPrefix" />
     </LinearLayout>
 
     <!-- Appbar layout must be on top of content so that transition can have correct z-order. -->
@@ -102,7 +104,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <android.support.v7.widget.Toolbar
+        <me.zhanghai.android.douya.ui.DoubleClickToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?actionBarSize"

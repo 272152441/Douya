@@ -6,12 +6,11 @@
 package me.zhanghai.android.douya.home;
 
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.design.widget.TabLayout;
-import android.support.v4.app.Fragment;
-import android.support.v4.view.ViewPager;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+import androidx.annotation.Nullable;
+import com.google.android.material.tabs.TabLayout;
+import androidx.fragment.app.Fragment;
+import androidx.viewpager.widget.ViewPager;
+import androidx.appcompat.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,17 +19,18 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import me.zhanghai.android.douya.R;
 import me.zhanghai.android.douya.broadcast.ui.HomeBroadcastListFragment;
-import me.zhanghai.android.douya.ui.AppBarManager;
+import me.zhanghai.android.douya.ui.AppBarHost;
 import me.zhanghai.android.douya.ui.AppBarWrapperLayout;
+import me.zhanghai.android.douya.ui.DoubleClickToolbar;
 import me.zhanghai.android.douya.ui.NotYetImplementedFragment;
 import me.zhanghai.android.douya.ui.TabFragmentPagerAdapter;
 
-public class HomeFragment extends Fragment implements AppBarManager {
+public class HomeFragment extends Fragment implements AppBarHost {
 
     @BindView(R.id.appBarWrapper)
     AppBarWrapperLayout mAppBarWrapperLayout;
     @BindView(R.id.toolbar)
-    Toolbar mToolbar;
+    DoubleClickToolbar mToolbar;
     @BindView(R.id.tab)
     TabLayout mTabLayout;
     @BindView(R.id.viewPager)
@@ -70,24 +70,10 @@ public class HomeFragment extends Fragment implements AppBarManager {
         activity.setSupportActionBar(mToolbar);
 
         mTabAdapter = new TabFragmentPagerAdapter(this);
-        mTabAdapter.addTab(new TabFragmentPagerAdapter.FragmentCreator() {
-            @Override
-            public Fragment createFragment() {
-                return HomeBroadcastListFragment.newInstance();
-            }
-        }, getString(R.string.home_broadcast));
-        mTabAdapter.addTab(new TabFragmentPagerAdapter.FragmentCreator() {
-            @Override
-            public Fragment createFragment() {
-                return NotYetImplementedFragment.newInstance();
-            }
-        }, getString(R.string.home_discover));
-        mTabAdapter.addTab(new TabFragmentPagerAdapter.FragmentCreator() {
-            @Override
-            public Fragment createFragment() {
-                return NotYetImplementedFragment.newInstance();
-            }
-        }, getString(R.string.home_online));
+        mTabAdapter.addTab(HomeBroadcastListFragment::newInstance, getString(R.string.home_broadcast));
+        mTabAdapter.addTab(NotYetImplementedFragment::newInstance, getString(R.string.home_discover));
+        mTabAdapter.addTab(NotYetImplementedFragment::newInstance, getString(R.string.home_topic));
+        mTabAdapter.addTab(NotYetImplementedFragment::newInstance, getString(R.string.home_online));
         mViewPager.setOffscreenPageLimit(mTabAdapter.getCount() - 1);
         mViewPager.setAdapter(mTabAdapter);
         mTabLayout.setupWithViewPager(mViewPager);
@@ -101,5 +87,10 @@ public class HomeFragment extends Fragment implements AppBarManager {
     @Override
     public void hideAppBar() {
         mAppBarWrapperLayout.hide();
+    }
+
+    @Override
+    public void setToolBarOnDoubleClickListener(DoubleClickToolbar.OnDoubleClickListener listener) {
+        mToolbar.setOnDoubleClickListener(listener);
     }
 }

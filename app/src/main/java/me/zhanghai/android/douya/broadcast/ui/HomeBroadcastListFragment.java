@@ -5,18 +5,15 @@
 
 package me.zhanghai.android.douya.broadcast.ui;
 
-import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.view.View;
-
 import butterknife.BindDimen;
-import butterknife.ButterKnife;
 import me.zhanghai.android.douya.R;
-import me.zhanghai.android.douya.broadcast.content.BroadcastListResource;
 import me.zhanghai.android.douya.broadcast.content.HomeBroadcastListResource;
+import me.zhanghai.android.douya.broadcast.content.TimelineBroadcastListResource;
 import me.zhanghai.android.douya.main.ui.MainActivity;
+import me.zhanghai.android.douya.network.api.info.frodo.Broadcast;
 
-public class HomeBroadcastListFragment extends BaseBroadcastListFragment {
+public class HomeBroadcastListFragment extends BaseTimelineBroadcastListFragment
+        implements HomeBroadcastListResource.Listener {
 
     @BindDimen(R.dimen.toolbar_and_tab_height)
     int mToolbarAndTabHeight;
@@ -32,17 +29,22 @@ public class HomeBroadcastListFragment extends BaseBroadcastListFragment {
     public HomeBroadcastListFragment() {}
 
     @Override
-    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-
-        ButterKnife.bind(this, view);
-
-        setPaddingTop(mToolbarAndTabHeight);
+    protected int getExtraPaddingTop() {
+        return mToolbarAndTabHeight;
     }
 
     @Override
-    protected BroadcastListResource onAttachBroadcastListResource() {
+    protected TimelineBroadcastListResource onAttachResource() {
         return HomeBroadcastListResource.attachTo(this);
+    }
+
+    @Override
+    public void onBroadcastInserted(int requestCode, int position, Broadcast insertedBroadcast) {
+        boolean hasFirstItemView = mList.getLayoutManager().findViewByPosition(0) != null;
+        onItemInserted(position, insertedBroadcast);
+        if (position == 0 && hasFirstItemView) {
+            mList.scrollToPosition(0);
+        }
     }
 
     @Override
@@ -50,6 +52,6 @@ public class HomeBroadcastListFragment extends BaseBroadcastListFragment {
         super.onSwipeRefresh();
 
         MainActivity mainActivity = (MainActivity) getActivity();
-        mainActivity.refreshNotificationList();
+        mainActivity.onRefresh();
     }
 }

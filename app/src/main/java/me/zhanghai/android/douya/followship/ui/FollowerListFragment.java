@@ -5,25 +5,33 @@
 
 package me.zhanghai.android.douya.followship.ui;
 
-import me.zhanghai.android.douya.followship.content.FollowerListResource;
-import me.zhanghai.android.douya.user.content.BaseUserListResource;
+import java.util.List;
 
-public class FollowerListFragment extends FollowshipListFragment {
+import me.zhanghai.android.douya.content.MoreListResourceFragment;
+import me.zhanghai.android.douya.followship.content.FollowerListResource;
+import me.zhanghai.android.douya.network.api.info.frodo.SimpleUser;
+
+public class FollowerListFragment extends FollowshipUserListFragment {
+
+    public static FollowerListFragment newInstance(String userIdOrUid) {
+        //noinspection deprecation
+        return new FollowerListFragment().setArguments(userIdOrUid);
+    }
 
     /**
      * @deprecated Use {@link #newInstance(String)} instead.
      */
     public FollowerListFragment() {}
 
-    public static FollowerListFragment newInstance(String userIdOrUid) {
-        //noinspection deprecation
-        FollowerListFragment fragment = new FollowerListFragment();
-        fragment.setArguments(userIdOrUid);
-        return fragment;
+    @Override
+    protected FollowerListFragment setArguments(String userIdOrUid) {
+        super.setArguments(userIdOrUid);
+
+        return this;
     }
 
     @Override
-    protected BaseUserListResource onAttachUserListResource() {
+    protected MoreListResourceFragment<?, List<SimpleUser>> onAttachResource() {
         return FollowerListResource.attachTo(getUserIdOrUid(), this);
     }
 }

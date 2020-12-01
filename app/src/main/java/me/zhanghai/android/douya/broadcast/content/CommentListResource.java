@@ -5,147 +5,69 @@
 
 package me.zhanghai.android.douya.broadcast.content;
 
-import android.support.annotation.Keep;
-
-import com.android.volley.VolleyError;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.Collections;
 import java.util.List;
 
-import me.zhanghai.android.douya.content.ResourceFragment;
+import me.zhanghai.android.douya.content.MoreRawListResourceFragment;
 import me.zhanghai.android.douya.eventbus.CommentDeletedEvent;
-import me.zhanghai.android.douya.eventbus.EventBusUtils;
-import me.zhanghai.android.douya.network.RequestFragment;
-import me.zhanghai.android.douya.network.api.ApiRequest;
-import me.zhanghai.android.douya.network.api.info.apiv2.Comment;
-import me.zhanghai.android.douya.network.api.info.apiv2.CommentList;
+import me.zhanghai.android.douya.network.api.ApiError;
+import me.zhanghai.android.douya.network.api.info.frodo.Comment;
+import me.zhanghai.android.douya.network.api.info.frodo.CommentList;
 
-public abstract class CommentListResource extends ResourceFragment
-        implements RequestFragment.Listener<CommentList, CommentListResource.State> {
-
-    private static final int DEFAULT_COUNT_PER_LOAD = 20;
-
-    private List<Comment> mCommentList;
-
-    private boolean mCanLoadMore = true;
-    private boolean mLoading;
-    private boolean mLoadingMore;
-
-    /**
-     * @return Unmodifiable comment list, or {@code null}.
-     */
-    public List<Comment> get() {
-        return mCommentList != null ? Collections.unmodifiableList(mCommentList) : null;
-    }
-
-    public boolean has() {
-        return mCommentList != null;
-    }
-
-    public boolean isEmpty() {
-        return mCommentList == null || mCommentList.isEmpty();
-    }
-
-    public boolean isLoading() {
-        return mLoading;
-    }
-
-    public boolean isLoadingMore() {
-        return mLoadingMore;
-    }
+public abstract class CommentListResource
+        extends MoreRawListResourceFragment<CommentList, Comment> {
 
     @Override
-    public void onStart() {
-        super.onStart();
-
-        EventBusUtils.register(this);
-
-        if (mCommentList == null || (mCommentList.isEmpty() && mCanLoadMore)) {
-            load(false);
-        }
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-
-        EventBusUtils.unregister(this);
-    }
-
-    public void load(boolean loadMore, int count) {
-
-        if (mLoading || (loadMore && !mCanLoadMore)) {
-            return;
-        }
-
-        mLoading = true;
-        mLoadingMore = loadMore;
+    protected void onLoadStarted() {
         getListener().onLoadCommentListStarted(getRequestCode());
-
-        Integer start = loadMore && mCommentList != null ? mCommentList.size() : null;
-        ApiRequest<CommentList> request = onCreateRequest(start, count);
-        State state = new State(loadMore, count);
-        RequestFragment.startRequest(request, state, this);
     }
-
-    public void load(boolean loadMore) {
-        load(loadMore, DEFAULT_COUNT_PER_LOAD);
-    }
-
-    protected abstract ApiRequest<CommentList> onCreateRequest(Integer start, Integer count);
 
     @Override
-    public void onVolleyResponse(int requestCode, final boolean successful,
-                                 final CommentList result, final VolleyError error,
-                                 final State requestState) {
-        postOnResumed(new Runnable() {
-            @Override
-            public void run() {
-                onLoadFinished(successful, result != null ? result.comments : null, error,
-                        requestState.loadMore, requestState.count);
-            }
-        });
+    protected void onLoadFinished(boolean more, int count, boolean successful, CommentList response,
+                                  ApiError error) {
+        onLoadFinished(more, count, successful, response != null ? response.comments : null, error);
     }
 
-    private void onLoadFinished(boolean successful, List<Comment> commentList,
-                                VolleyError error, boolean loadMore, int count) {
-
-        mLoading = false;
-        mLoadingMore = false;
-        getListener().onLoadCommentListFinished(getRequestCode());
-
+    private void onLoadFinished(boolean more, int count, boolean successful, List<Comment> response,
+                                ApiError error) {
         if (successful) {
-            mCanLoadMore = commentList.size() == count;
-            if (loadMore) {
-                mCommentList.addAll(commentList);
+            if (more) {
+                append(response);
+                getListener().onLoadCommentListFinished(getRequestCode());
                 getListener().onCommentListAppended(getRequestCode(),
-                        Collections.unmodifiableList(commentList));
+                        Collections.unmodifiableList(response));
             } else {
-                mCommentList = commentList;
+                set(response);
+                getListener().onLoadCommentListFinished(getRequestCode());
                 getListener().onCommentListChanged(getRequestCode(),
-                        Collections.unmodifiableList(commentList));
+                        Collections.unmodifiableList(get()));
             }
         } else {
+            getListener().onLoadCommentListFinished(getRequestCode());
             getListener().onLoadCommentListError(getRequestCode(), error);
         }
     }
 
-    protected void append(Comment comment) {
-        mCommentList.add(comment);
-        getListener().onCommentListAppended(getRequestCode(), Collections.singletonList(comment));
+    protected void appendAndNotifyListener(List<Comment> commentList) {
+        append(commentList);
+        getListener().onCommentListAppended(getRequestCode(), commentList);
     }
 
-    @Keep
-    public void onEventMainThread(CommentDeletedEvent event) {
+    @Subscribe(threadMode = ThreadMode.POSTING)
+    public void onCommentDeleted(CommentDeletedEvent event) {
 
-        if (event.isFromMyself(this) || mCommentList == null) {
+        if (event.isFromMyself(this) || isEmpty()) {
             return;
         }
 
-        for (int i = 0, size = mCommentList.size(); i < size; ) {
-            Comment comment = mCommentList.get(i);
+        List<Comment> commentList = get();
+        for (int i = 0, size = commentList.size(); i < size; ) {
+            Comment comment = commentList.get(i);
             if (comment.id == event.commentId) {
-                mCommentList.remove(i);
+                commentList.remove(i);
                 getListener().onCommentRemoved(getRequestCode(), i);
                 --size;
             } else {
@@ -158,21 +80,10 @@ public abstract class CommentListResource extends ResourceFragment
         return (Listener) getTarget();
     }
 
-    static class State {
-
-        public boolean loadMore;
-        public int count;
-
-        public State(boolean loadMore, int count) {
-            this.loadMore = loadMore;
-            this.count = count;
-        }
-    }
-
     public interface Listener {
         void onLoadCommentListStarted(int requestCode);
         void onLoadCommentListFinished(int requestCode);
-        void onLoadCommentListError(int requestCode, VolleyError error);
+        void onLoadCommentListError(int requestCode, ApiError error);
         /**
          * @param newCommentList Unmodifiable.
          */

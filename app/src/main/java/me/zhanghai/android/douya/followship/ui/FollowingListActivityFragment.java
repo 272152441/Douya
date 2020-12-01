@@ -7,20 +7,24 @@ package me.zhanghai.android.douya.followship.ui;
 
 public class FollowingListActivityFragment extends FollowshipListActivityFragment {
 
+    public static FollowingListActivityFragment newInstance(String userIdOrUid) {
+        //noinspection deprecation
+        return new FollowingListActivityFragment().setArguments(userIdOrUid);
+    }
+
     /**
      * @deprecated Use {@link #newInstance(String)} instead.
      */
     public FollowingListActivityFragment() {}
 
-    public static FollowingListActivityFragment newInstance(String userIdOrUid) {
-        //noinspection deprecation
-        FollowingListActivityFragment fragment = new FollowingListActivityFragment();
-        fragment.setArguments(userIdOrUid);
-        return fragment;
+    @Override
+    protected FollowingListActivityFragment setArguments(String userIdOrUid) {
+        super.setArguments(userIdOrUid);
+        return this;
     }
 
     @Override
-    protected FollowshipListFragment onCreateListFragment() {
+    protected FollowshipUserListFragment onCreateListFragment() {
         return FollowingListFragment.newInstance(getUserIdOrUid());
     }
 }

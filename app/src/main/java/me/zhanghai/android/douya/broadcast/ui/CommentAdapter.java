@@ -6,7 +6,7 @@
 package me.zhanghai.android.douya.broadcast.ui;
 
 import android.content.Context;
-import android.support.v7.widget.RecyclerView;
+import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -17,7 +17,7 @@ import java.util.List;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import me.zhanghai.android.douya.R;
-import me.zhanghai.android.douya.network.api.info.apiv2.Comment;
+import me.zhanghai.android.douya.network.api.info.frodo.Comment;
 import me.zhanghai.android.douya.profile.ui.ProfileActivity;
 import me.zhanghai.android.douya.ui.ClickableSimpleAdapter;
 import me.zhanghai.android.douya.ui.TimeTextView;
@@ -28,8 +28,8 @@ import me.zhanghai.android.douya.util.ViewUtils;
 public class CommentAdapter extends ClickableSimpleAdapter<Comment, CommentAdapter.ViewHolder> {
 
     public CommentAdapter(List<Comment> commentList,
-                          OnItemClickListener<Comment, CommentAdapter.ViewHolder> onItemClickListener) {
-        super(commentList, onItemClickListener, null);
+                          OnItemClickListener<Comment> onItemClickListener) {
+        super(commentList, onItemClickListener);
 
         setHasStableIds(true);
     }
@@ -49,18 +49,14 @@ public class CommentAdapter extends ClickableSimpleAdapter<Comment, CommentAdapt
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
-        final Context context = RecyclerViewUtils.getContext(holder);
-        final Comment comment = getItem(position);
-        ImageUtils.loadAvatar(holder.avatarImage, comment.author.avatar, context);
-        holder.avatarImage.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                context.startActivity(ProfileActivity.makeIntent(comment.author, context));
-            }
-        });
+        Comment comment = getItem(position);
+        ImageUtils.loadAvatar(holder.avatarImage, comment.author.avatar);
+        Context context = RecyclerViewUtils.getContext(holder);
+        holder.avatarImage.setOnClickListener(view -> context.startActivity(
+                ProfileActivity.makeIntent(comment.author, context)));
         holder.nameText.setText(comment.author.name);
-        holder.timeText.setDoubanTime(comment.createdAt);
-        holder.textText.setText(comment.getContentWithEntities(context));
+        holder.timeText.setDoubanTime(comment.createTime);
+        holder.textText.setText(comment.getTextWithEntities());
     }
 
     @Override

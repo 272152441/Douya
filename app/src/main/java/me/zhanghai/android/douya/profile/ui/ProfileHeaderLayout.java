@@ -10,8 +10,8 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Outline;
 import android.os.Build;
-import android.support.v4.widget.TextViewCompat;
-import android.support.v7.widget.Toolbar;
+import androidx.core.widget.TextViewCompat;
+import androidx.appcompat.widget.Toolbar;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.ViewOutlineProvider;
@@ -27,12 +27,12 @@ import butterknife.ButterKnife;
 import de.hdodenhof.circleimageview.CircleImageView;
 import me.zhanghai.android.douya.R;
 import me.zhanghai.android.douya.followship.content.FollowUserManager;
+import me.zhanghai.android.douya.gallery.ui.GalleryActivity;
+import me.zhanghai.android.douya.network.api.info.apiv2.SimpleUser;
 import me.zhanghai.android.douya.network.api.info.apiv2.User;
-import me.zhanghai.android.douya.network.api.info.apiv2.UserInfo;
 import me.zhanghai.android.douya.profile.util.ProfileUtils;
 import me.zhanghai.android.douya.ui.FlexibleSpaceHeaderView;
-import me.zhanghai.android.douya.ui.GalleryActivity;
-import me.zhanghai.android.douya.ui.JoinedAtLocationAutoGoneTextView;
+import me.zhanghai.android.douya.ui.JoinTimeLocationAutoGoneTextView;
 import me.zhanghai.android.douya.ui.WhiteIndeterminateProgressIconDrawable;
 import me.zhanghai.android.douya.util.AppUtils;
 import me.zhanghai.android.douya.util.ImageUtils;
@@ -70,8 +70,8 @@ public class ProfileHeaderLayout extends FrameLayout implements FlexibleSpaceHea
     TextView mUsernameText;
     @BindView(R.id.signature)
     TextView mSignatureText;
-    @BindView(R.id.joined_at_location)
-    JoinedAtLocationAutoGoneTextView mJoinedAtLocationText;
+    @BindView(R.id.join_time_location)
+    JoinTimeLocationAutoGoneTextView mJoinTimeLocationText;
     @BindView(R.id.follow)
     Button mFollowButton;
     @BindView(R.id.avatar_container)
@@ -180,7 +180,7 @@ public class ProfileHeaderLayout extends FrameLayout implements FlexibleSpaceHea
         float avatarHorizontalFraction = avatarMarginTop < smallAvatarMarginTop ?
                 MathUtils.unlerp(smallAvatarMarginTop, -largeAvatarSizeHalf, avatarMarginTop) : 0;
         avatarMarginTop = Math.max(smallAvatarMarginTop, avatarMarginTop) + mInsetTop;
-        int avatarMarginLeft = MathUtils.lerp(appBarWidth / 2 - largeAvatarSizeHalf,
+        int avatarMarginLeft = MathUtils.lerpInt(appBarWidth / 2 - largeAvatarSizeHalf,
                 mScreenEdgeHorizontalMargin, avatarHorizontalFraction);
         MarginLayoutParams avatarContainerLayoutParams =
                 (MarginLayoutParams) mAvatarContainerLayout.getLayoutParams();
@@ -226,7 +226,7 @@ public class ProfileHeaderLayout extends FrameLayout implements FlexibleSpaceHea
     }
 
     private int computeVisibleAppBarHeight() {
-        return MathUtils.lerp(getAppBarMaxHeight(), getAppBarMinHeight(), getFraction());
+        return MathUtils.lerpInt(getAppBarMaxHeight(), getAppBarMinHeight(), getFraction());
     }
 
     private float getFraction() {
@@ -248,7 +248,7 @@ public class ProfileHeaderLayout extends FrameLayout implements FlexibleSpaceHea
     public void scrollTo(int scroll) {
 
         int scrollExtent = getScrollExtent();
-        scroll = MathUtils.clamp(scroll, 0, scrollExtent);
+        scroll = MathUtils.constrain(scroll, 0, scrollExtent);
         if (mScroll == scroll) {
             return;
         }
@@ -286,30 +286,30 @@ public class ProfileHeaderLayout extends FrameLayout implements FlexibleSpaceHea
         ViewUtils.setHeight(mAppBarLayout, mMaxHeight);
     }
 
-    public void bindUser(User user) {
+    public void bindSimpleUser(SimpleUser simpleUser) {
+        final String largeAvatar = simpleUser.getLargeAvatarOrAvatar();
+        ImageUtils.loadProfileAvatarAndFadeIn(mAvatarImage, largeAvatar);
         final Context context = getContext();
-        final String largeAvatar = user.getLargeAvatarOrAvatar();
-        ImageUtils.loadProfileAvatarAndFadeIn(mAvatarImage, largeAvatar, context);
         mAvatarImage.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
                 context.startActivity(GalleryActivity.makeIntent(largeAvatar, context));
             }
         });
-        mToolbarUsernameText.setText(user.name);
-        mUsernameText.setText(user.name);
+        mToolbarUsernameText.setText(simpleUser.name);
+        mUsernameText.setText(simpleUser.name);
         mSignatureText.setText(null);
-        mJoinedAtLocationText.setText(null);
+        mJoinTimeLocationText.setText(null);
         TextViewCompat.setCompoundDrawablesRelativeWithIntrinsicBounds(mFollowButton, 0, 0, 0, 0);
         mFollowButton.setVisibility(GONE);
     }
 
-    public void bindUserInfo(final UserInfo userInfo) {
+    public void bindUser(final User user) {
         final Context context = getContext();
         if (!ViewUtils.isVisible(mAvatarImage)) {
-            // HACK: Don't load avatar again if already loaded by bindUser().
-            final String largeAvatar = userInfo.getLargeAvatarOrAvatar();
-            ImageUtils.loadProfileAvatarAndFadeIn(mAvatarImage, largeAvatar, context);
+            // HACK: Don't load avatar again if already loaded by bindSimpleUser().
+            final String largeAvatar = user.getLargeAvatarOrAvatar();
+            ImageUtils.loadProfileAvatarAndFadeIn(mAvatarImage, largeAvatar);
             mAvatarImage.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -317,11 +317,11 @@ public class ProfileHeaderLayout extends FrameLayout implements FlexibleSpaceHea
                 }
             });
         }
-        mToolbarUsernameText.setText(userInfo.name);
-        mUsernameText.setText(userInfo.name);
-        mSignatureText.setText(userInfo.signature);
-        mJoinedAtLocationText.setJoinedAtAndLocation(userInfo.createdAt, userInfo.locationName);
-        if (userInfo.isOneself(context)) {
+        mToolbarUsernameText.setText(user.name);
+        mUsernameText.setText(user.name);
+        mSignatureText.setText(user.signature);
+        mJoinTimeLocationText.setJoinTimeAndLocation(user.createTime, user.locationName);
+        if (user.isOneself()) {
             TextViewCompat.setCompoundDrawablesRelativeWithIntrinsicBounds(mFollowButton,
                     R.drawable.edit_icon_white_24dp, 0, 0, 0);
             mFollowButton.setText(R.string.profile_edit);
@@ -329,13 +329,13 @@ public class ProfileHeaderLayout extends FrameLayout implements FlexibleSpaceHea
                 @Override
                 public void onClick(View view) {
                     if (mListener != null) {
-                        mListener.onEditProfile(userInfo);
+                        mListener.onEditProfile(user);
                     }
                 }
             });
         } else {
             FollowUserManager followUserManager = FollowUserManager.getInstance();
-            String userIdOrUid = userInfo.getIdOrUid();
+            String userIdOrUid = user.getIdOrUid();
             if (followUserManager.isWriting(userIdOrUid)) {
                 TextViewCompat.setCompoundDrawablesRelativeWithIntrinsicBounds(mFollowButton,
                         new WhiteIndeterminateProgressIconDrawable(context), null, null, null);
@@ -344,8 +344,8 @@ public class ProfileHeaderLayout extends FrameLayout implements FlexibleSpaceHea
             } else {
                 int followDrawableId;
                 int followStringId;
-                if (userInfo.isFollowed) {
-                    if (userInfo.isFollower) {
+                if (user.isFollowed) {
+                    if (user.isFollower) {
                         followDrawableId = R.drawable.mutual_icon_white_24dp;
                         followStringId = R.string.profile_following_mutual;
                     } else {
@@ -364,7 +364,7 @@ public class ProfileHeaderLayout extends FrameLayout implements FlexibleSpaceHea
                 @Override
                 public void onClick(View view) {
                     if (mListener != null) {
-                        mListener.onFollowUser(userInfo, !userInfo.isFollowed);
+                        mListener.onFollowUser(user, !user.isFollowed);
                     }
                 }
             });
@@ -373,7 +373,7 @@ public class ProfileHeaderLayout extends FrameLayout implements FlexibleSpaceHea
     }
 
     public interface Listener {
-        void onEditProfile(UserInfo userInfo);
-        void onFollowUser(UserInfo userInfo, boolean follow);
+        void onEditProfile(User user);
+        void onFollowUser(User user, boolean follow);
     }
 }

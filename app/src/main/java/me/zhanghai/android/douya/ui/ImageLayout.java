@@ -5,10 +5,11 @@
 
 package me.zhanghai.android.douya.ui;
 
-import android.annotation.TargetApi;
+import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.res.TypedArray;
 import android.os.Build;
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.widget.TintTypedArray;
 import android.util.AttributeSet;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -16,7 +17,6 @@ import android.widget.ImageView;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import me.zhanghai.android.douya.R;
-import me.zhanghai.android.douya.network.api.info.apiv2.Image;
 import me.zhanghai.android.douya.util.ImageUtils;
 import me.zhanghai.android.douya.util.ViewUtils;
 
@@ -33,38 +33,39 @@ public class ImageLayout extends FrameLayout {
     public ImageLayout(Context context) {
         super(context);
 
-        init(getContext(), null, 0, 0);
+        init(null, 0, 0);
     }
 
     public ImageLayout(Context context, AttributeSet attrs) {
         super(context, attrs);
 
-        init(getContext(), attrs, 0, 0);
+        init(attrs, 0, 0);
     }
 
     public ImageLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
 
-        init(getContext(), attrs, defStyleAttr, 0);
+        init(attrs, defStyleAttr, 0);
     }
 
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     public ImageLayout(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
 
-        init(getContext(), attrs, defStyleAttr, defStyleRes);
+        init(attrs, defStyleAttr, defStyleRes);
     }
 
-    private void init(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    @SuppressLint("RestrictedApi")
+    private void init(AttributeSet attrs, int defStyleAttr, int defStyleRes) {
 
         setClickable(true);
         setFocusable(true);
 
-        inflate(context, R.layout.image_layout, this);
+        onInflateChildren();
         ButterKnife.bind(this);
 
-        TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.ImageLayout, defStyleAttr,
-                defStyleRes);
+        TintTypedArray a = TintTypedArray.obtainStyledAttributes(getContext(), attrs,
+                R.styleable.ImageLayout, defStyleAttr, defStyleRes);
         int fillOrientation = a.getInt(R.styleable.ImageLayout_fillOrientation,
                 FILL_ORIENTATION_HORIZONTAL);
         a.recycle();
@@ -77,9 +78,13 @@ public class ImageLayout extends FrameLayout {
         mImageView.setLayoutParams(layoutParams);
     }
 
-    public void loadImage(Image image) {
-        ImageUtils.loadImage(mImageView, image, getContext());
-        ViewUtils.setVisibleOrGone(mGifImage, image.animated);
+    protected void onInflateChildren() {
+        ViewUtils.inflateInto(R.layout.image_layout, this);
+    }
+
+    public void loadImage(SizedImageItem image) {
+        ImageUtils.loadImageWithRatio(mImageView, image);
+        ViewUtils.setVisibleOrGone(mGifImage, image.isAnimated());
     }
 
     public void releaseImage() {

@@ -7,7 +7,7 @@ package me.zhanghai.android.douya.notification.ui;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
-import android.support.v7.widget.RecyclerView;
+import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -30,6 +30,8 @@ public class NotificationAdapter extends SimpleAdapter<Notification,
     private final ColorStateList mTextColorPrimary;
     private final ColorStateList mTextColorSecondary;
 
+    private Listener mListener;
+
     public NotificationAdapter(List<Notification> notificationList, Context context) {
         super(notificationList);
 
@@ -39,6 +41,10 @@ public class NotificationAdapter extends SimpleAdapter<Notification,
                 android.R.attr.textColorSecondary, context);
 
         setHasStableIds(true);
+    }
+
+    public void setListener(Listener listener) {
+        mListener = listener;
     }
 
     @Override
@@ -58,7 +64,9 @@ public class NotificationAdapter extends SimpleAdapter<Notification,
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                markNotificationAsRead(notification);
+                if (mListener != null) {
+                    mListener.onMarkNotificationAsRead(notification);
+                }
                 UriHandler.open(notification.targetUri, context);
             }
         });
@@ -67,9 +75,8 @@ public class NotificationAdapter extends SimpleAdapter<Notification,
         holder.timeText.setDoubanTime(notification.time);
     }
 
-    private void markNotificationAsRead(Notification notification) {
-        notification.read = true;
-        notifyItemChangedById(notification.id);
+    public interface Listener {
+        void onMarkNotificationAsRead(Notification notification);
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {

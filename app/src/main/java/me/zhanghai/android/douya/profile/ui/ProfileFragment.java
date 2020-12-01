@@ -7,13 +7,12 @@ package me.zhanghai.android.douya.profile.ui;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.StaggeredGridLayoutManager;
-import android.support.v7.widget.Toolbar;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.StaggeredGridLayoutManager;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -21,29 +20,32 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.android.volley.VolleyError;
-
 import java.util.List;
 
 import butterknife.BindView;
+import butterknife.BindViews;
 import butterknife.ButterKnife;
 import me.zhanghai.android.customtabshelper.CustomTabsHelperFragment;
 import me.zhanghai.android.douya.R;
 import me.zhanghai.android.douya.followship.content.FollowUserManager;
 import me.zhanghai.android.douya.link.NotImplementedManager;
 import me.zhanghai.android.douya.network.api.ApiError;
-import me.zhanghai.android.douya.network.api.info.apiv2.Broadcast;
+import me.zhanghai.android.douya.network.api.info.frodo.Broadcast;
 import me.zhanghai.android.douya.network.api.info.apiv2.User;
-import me.zhanghai.android.douya.network.api.info.apiv2.UserInfo;
 import me.zhanghai.android.douya.network.api.info.frodo.Diary;
-import me.zhanghai.android.douya.network.api.info.frodo.Review;
+import me.zhanghai.android.douya.network.api.info.frodo.SimpleReview;
+import me.zhanghai.android.douya.network.api.info.frodo.SimpleUser;
 import me.zhanghai.android.douya.network.api.info.frodo.UserItems;
 import me.zhanghai.android.douya.profile.content.ProfileResource;
 import me.zhanghai.android.douya.profile.util.ProfileUtils;
 import me.zhanghai.android.douya.ui.ContentStateLayout;
 import me.zhanghai.android.douya.ui.CopyTextDialogFragment;
+import me.zhanghai.android.douya.ui.DoubleClickToolbar;
+import me.zhanghai.android.douya.ui.WebViewActivity;
+import me.zhanghai.android.douya.util.DoubanUtils;
 import me.zhanghai.android.douya.util.FragmentUtils;
 import me.zhanghai.android.douya.util.LogUtils;
+import me.zhanghai.android.douya.util.ShareUtils;
 import me.zhanghai.android.douya.util.ToastUtils;
 import me.zhanghai.android.douya.util.ViewUtils;
 
@@ -54,8 +56,8 @@ public class ProfileFragment extends Fragment implements ProfileResource.Listene
     private static final String KEY_PREFIX = ProfileFragment.class.getName() + '.';
 
     private static final String EXTRA_USER_ID_OR_UID = KEY_PREFIX + "user_id_or_uid";
+    private static final String EXTRA_SIMPLE_USER = KEY_PREFIX + "simple_user";
     private static final String EXTRA_USER = KEY_PREFIX + "user";
-    private static final String EXTRA_USER_INFO = KEY_PREFIX + "user_info";
 
     @BindView(R.id.scroll)
     ProfileLayout mScrollLayout;
@@ -64,32 +66,39 @@ public class ProfileFragment extends Fragment implements ProfileResource.Listene
     @BindView(R.id.dismiss)
     View mDismissView;
     @BindView(R.id.toolbar)
-    Toolbar mToolbar;
+    DoubleClickToolbar mToolbar;
+    @BindViews({
+            R.id.profile_header_animate_changes_layout_1,
+            R.id.profile_header_animate_changes_layout_2
+    })
+    ViewGroup[] mAnimateChangesLayouts;
     @BindView(R.id.contentState)
     ContentStateLayout mContentStateLayout;
     @BindView(R.id.content)
     RecyclerView mContentList;
 
     private String mUserIdOrUid;
+    private me.zhanghai.android.douya.network.api.info.apiv2.SimpleUser mSimpleUser;
     private User mUser;
-    private UserInfo mUserInfo;
 
-    private ProfileResource mProfileResource;
+    private ProfileResource mResource;
 
-    private ProfileAdapter mProfileAdapter;
+    private ProfileAdapter mAdapter;
 
-    public static ProfileFragment newInstance(String userIdOrUid, User user, UserInfo userInfo) {
+    public static ProfileFragment newInstance(
+            String userIdOrUid,
+            me.zhanghai.android.douya.network.api.info.apiv2.SimpleUser simpleUser, User user) {
         //noinspection deprecation
         ProfileFragment fragment = new ProfileFragment();
-        Bundle arguments = FragmentUtils.ensureArguments(fragment);
-        arguments.putString(EXTRA_USER_ID_OR_UID, userIdOrUid);
-        arguments.putParcelable(EXTRA_USER, user);
-        arguments.putParcelable(EXTRA_USER_INFO, userInfo);
+        FragmentUtils.getArgumentsBuilder(fragment)
+                .putString(EXTRA_USER_ID_OR_UID, userIdOrUid)
+                .putParcelable(EXTRA_SIMPLE_USER, simpleUser)
+                .putParcelable(EXTRA_USER, user);
         return fragment;
     }
 
     /**
-     * @deprecated Use {@link #newInstance(String, User, UserInfo)} instead.
+     * @deprecated Use {@link #newInstance(String, me.zhanghai.android.douya.network.api.info.apiv2.SimpleUser, User)} instead.
      */
     public ProfileFragment() {}
 
@@ -99,8 +108,8 @@ public class ProfileFragment extends Fragment implements ProfileResource.Listene
 
         Bundle arguments = getArguments();
         mUserIdOrUid = arguments.getString(EXTRA_USER_ID_OR_UID);
+        mSimpleUser = arguments.getParcelable(EXTRA_SIMPLE_USER);
         mUser = arguments.getParcelable(EXTRA_USER);
-        mUserInfo = arguments.getParcelable(EXTRA_USER_INFO);
 
         setHasOptionsMenu(true);
     }
@@ -126,7 +135,7 @@ public class ProfileFragment extends Fragment implements ProfileResource.Listene
         super.onActivityCreated(savedInstanceState);
 
         CustomTabsHelperFragment.attachTo(this);
-        mProfileResource = ProfileResource.attachTo(mUserIdOrUid, mUser, mUserInfo, this);
+        mResource = ProfileResource.attachTo(mUserIdOrUid, mSimpleUser, mUser, this);
 
         mScrollLayout.setListener(new ProfileLayout.Listener() {
             @Override
@@ -140,23 +149,25 @@ public class ProfileFragment extends Fragment implements ProfileResource.Listene
             mScrollLayout.enter();
         }
 
-        mDismissView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                exit();
-            }
-        });
+        mDismissView.setOnClickListener(view -> exit());
 
         AppCompatActivity activity = (AppCompatActivity) getActivity();
         activity.setSupportActionBar(mToolbar);
         activity.getSupportActionBar().setTitle(null);
 
-        if (mProfileResource.hasUserInfo()) {
-            mHeaderLayout.bindUserInfo(mProfileResource.getUserInfo());
-        } else if (mProfileResource.hasUser()) {
-            mHeaderLayout.bindUser(mProfileResource.getUser());
+        if (mResource.hasUser()) {
+            mHeaderLayout.bindUser(mResource.getUser());
+        } else if (mResource.hasSimpleUser()) {
+            mHeaderLayout.bindSimpleUser(mResource.getSimpleUser());
         }
         mHeaderLayout.setListener(this);
+        mToolbar.setOnDoubleClickListener(view -> {
+            if (!mScrollLayout.isHeaderCollapsed()) {
+                return false;
+            }
+            mScrollLayout.animateHeaderViewScroll(false);
+            return true;
+        });
 
         if (ViewUtils.hasSw600Dp(activity)) {
             mContentList.setLayoutManager(new StaggeredGridLayoutManager(2,
@@ -164,12 +175,12 @@ public class ProfileFragment extends Fragment implements ProfileResource.Listene
         } else {
             mContentList.setLayoutManager(new LinearLayoutManager(activity));
         }
-        mProfileAdapter = new ProfileAdapter(this);
-        mContentList.setAdapter(mProfileAdapter);
-        if (mProfileResource.isLoaded()) {
-            mProfileResource.notifyChangedIfLoaded();
-        } else {
-            mContentStateLayout.setLoading();
+        mAdapter = new ProfileAdapter(this);
+        mContentList.setAdapter(mAdapter);
+
+        mContentStateLayout.setLoading();
+        if (mResource.isAnyLoaded()) {
+            mResource.notifyChangedIfLoaded();
         }
     }
 
@@ -177,7 +188,7 @@ public class ProfileFragment extends Fragment implements ProfileResource.Listene
     public void onDestroy() {
         super.onDestroy();
 
-        mProfileResource.detach();
+        mResource.detach();
     }
 
     public void onBackPressed() {
@@ -199,6 +210,10 @@ public class ProfileFragment extends Fragment implements ProfileResource.Listene
     public void onPrepareOptionsMenu(Menu menu) {
         super.onPrepareOptionsMenu(menu);
 
+        updateOptionsMenu();
+    }
+
+    private void updateOptionsMenu() {
         // TODO: Block or unblock.
     }
 
@@ -206,8 +221,7 @@ public class ProfileFragment extends Fragment implements ProfileResource.Listene
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_send_doumail:
-                // TODO
-                NotImplementedManager.showNotYetImplementedToast(getActivity());
+                sendDoumail();
                 return true;
             case R.id.action_blacklist:
                 // TODO
@@ -217,60 +231,101 @@ public class ProfileFragment extends Fragment implements ProfileResource.Listene
                 // TODO
                 NotImplementedManager.showNotYetImplementedToast(getActivity());
                 return true;
+            case R.id.action_share:
+                share();
+                return true;
+            case R.id.action_view_on_web:
+                viewOnWeb();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
     }
 
     @Override
-    public void onLoadError(int requestCode, VolleyError error) {
+    public void onLoadError(int requestCode, ApiError error) {
         LogUtils.e(error.toString());
-        mContentStateLayout.setError();
+        if (mAdapter.getItemCount() > 0) {
+            mAdapter.setError();
+        } else {
+            mContentStateLayout.setError();
+        }
         Activity activity = getActivity();
         ToastUtils.show(ApiError.getErrorString(error, activity), activity);
     }
 
     @Override
-    public void onUserInfoChanged(int requestCode, UserInfo newUserInfo) {
-        mHeaderLayout.bindUserInfo(newUserInfo);
+    public void onUserChanged(int requestCode, User newUser) {
+        // WORKAROUND: Fix for LayoutTransition visual glitch when view is scrolling.
+        if (!mScrollLayout.isHeaderOpen()) {
+            for (ViewGroup animateChangesLayout : mAnimateChangesLayouts) {
+                animateChangesLayout.setLayoutTransition(null);
+            }
+        }
+        mHeaderLayout.bindUser(newUser);
+        updateOptionsMenu();
     }
 
     @Override
-    public void onUserInfoWriteStarted(int requestCode) {
-        mHeaderLayout.bindUserInfo(mProfileResource.getUserInfo());
+    public void onUserWriteStarted(int requestCode) {
+        mHeaderLayout.bindUser(mResource.getUser());
     }
 
     @Override
-    public void onUserInfoWriteFinished(int requestCode) {
-        mHeaderLayout.bindUserInfo(mProfileResource.getUserInfo());
+    public void onUserWriteFinished(int requestCode) {
+        mHeaderLayout.bindUser(mResource.getUser());
     }
 
     @Override
-    public void onChanged(int requestCode, UserInfo newUserInfo, List<Broadcast> newBroadcastList,
-                          List<User> newFollowingList, List<Diary> newDiaryList,
-                          List<UserItems> newUserItemList, List<Review> newReviewList) {
-        mProfileAdapter.setData(new ProfileAdapter.Data(newUserInfo, newBroadcastList,
-                newFollowingList, newDiaryList, newUserItemList, newReviewList));
-        mContentStateLayout.setLoaded(true);
+    public void onChanged(int requestCode, User newUser, List<Broadcast> newBroadcastList,
+                          List<SimpleUser> newFollowingList, List<Diary> newDiaryList,
+                          List<UserItems> newUserItemList, List<SimpleReview> newReviewList) {
+        mAdapter.setData(new ProfileDataAdapter.Data(newUser, newBroadcastList, newFollowingList,
+                newDiaryList, newUserItemList, newReviewList));
+        if (mAdapter.getItemCount() > 0) {
+            mContentStateLayout.setLoaded(true);
+        }
+        updateOptionsMenu();
+    }
+
+    private void sendDoumail() {
+        String userIdOrUid = mResource.getUserIdOrUid();
+        NotImplementedManager.sendDoumail(userIdOrUid, getActivity());
+    }
+
+    private void share() {
+        ShareUtils.shareText(makeUrl(), getActivity());
+    }
+
+    private void viewOnWeb() {
+        startActivity(WebViewActivity.makeIntent(makeUrl(), true, getActivity()));
+    }
+
+    private String makeUrl() {
+        if (mResource.hasSimpleUser()) {
+            return mResource.getSimpleUser().getUrl();
+        } else {
+            return DoubanUtils.makeUserUrl(mResource.getUserIdOrUid());
+        }
     }
 
     @Override
-    public void onEditProfile(UserInfo userInfo) {
-        NotImplementedManager.showNotYetImplementedToast(getActivity());
+    public void onEditProfile(User user) {
+        NotImplementedManager.editProfile(getActivity());
     }
 
     @Override
-    public void onFollowUser(UserInfo userInfo, boolean follow) {
+    public void onFollowUser(User user, boolean follow) {
         if (follow) {
-            FollowUserManager.getInstance().write(userInfo, true, getActivity());
+            FollowUserManager.getInstance().write(user, true, getActivity());
         } else {
             ConfirmUnfollowUserDialogFragment.show(this);
         }
     }
 
     @Override
-    public void unfollowUser() {
-        FollowUserManager.getInstance().write(mProfileResource.getUserInfo(), false, getActivity());
+    public void onUnfollowUser() {
+        FollowUserManager.getInstance().write(mResource.getUser(), false, getActivity());
     }
 
     @Override

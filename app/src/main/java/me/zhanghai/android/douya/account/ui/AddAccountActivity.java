@@ -10,9 +10,10 @@ import android.accounts.AccountManagerCallback;
 import android.accounts.AccountManagerFuture;
 import android.accounts.AuthenticatorException;
 import android.accounts.OperationCanceledException;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.IOException;
 
@@ -20,8 +21,14 @@ import me.zhanghai.android.douya.account.util.AccountUtils;
 
 public class AddAccountActivity extends AppCompatActivity {
 
-    public static final String EXTRA_ON_ADDED_INTENT = AddAccountActivity.class.getName()
-            + ".on_added_intent";
+    private static final String KEY_PREFIX = AddAccountActivity.class.getName() + '.';
+
+    private static final String EXTRA_ON_ADDED_INTENT = KEY_PREFIX + "on_added_intent";
+
+    public static Intent makeIntent(Intent onAddedIntent, Context context) {
+        return new Intent(context, AddAccountActivity.class)
+                .putExtra(EXTRA_ON_ADDED_INTENT, onAddedIntent);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

@@ -8,9 +8,23 @@
 <notices>
 
     <notice>
-        <name>PhotoView</name>
-        <url>https://github.com/chrisbanes/PhotoView</url>
-        <copyright>Copyright 2011, 2012 Chris Banes</copyright>
+        <name>Transitions Everywhere</name>
+        <url>https://github.com/andkulikov/Transitions-Everywhere</url>
+        <copyright>Copyright 2013 Andrey Kulikov</copyright>
+        <license>Apache Software License 2.0</license>
+    </notice>
+
+    <notice>
+        <name>Stetho</name>
+        <url>https://github.com/facebook/stetho</url>
+        <copyright>Copyright 2015 Facebook Inc.</copyright>
+        <license>BSD 3-Clause License</license>
+    </notice>
+
+    <notice>
+        <name>SubsamplingScaleImageView</name>
+        <url>https://github.com/davemorrissey/subsampling-scale-image-view</url>
+        <copyright>Copyright 2016 David Morrissey</copyright>
         <license>Apache Software License 2.0</license>
     </notice>
 
@@ -19,6 +33,20 @@
         <url>https://github.com/bumptech/glide</url>
         <copyright>Copyright 2014 Google, Inc.</copyright>
         <license>BSD 2-Clause License</license>
+    </notice>
+
+    <notice>
+        <name>PhotoView</name>
+        <url>https://github.com/chrisbanes/PhotoView</url>
+        <copyright>Copyright 2011, 2012 Chris Banes</copyright>
+        <license>Apache Software License 2.0</license>
+    </notice>
+
+    <notice>
+        <name>LunarCalendar</name>
+        <url>https://github.com/XhinLiang/LunarCalendar</url>
+        <copyright>Copyright 2016 XhinLiang</copyright>
+        <license>Apache Software License 2.0</license>
     </notice>
 
     <notice>
@@ -57,9 +85,65 @@
     </notice>
 
     <notice>
-        <name>Volley</name>
-        <url>https://github.com/mcxiaoke/android-volley</url>
-        <copyright>Copyright 2014 Xiaoke Zhang&lt;br&gt;Copyright 2011 The Android Open Source Project</copyright>
+        <name>Retrofit</name>
+        <url>https://github.com/square/retrofit</url>
+        <copyright>Copyright 2013 Square, Inc.</copyright>
+        <license>Apache Software License 2.0</license>
+    </notice>
+
+    <notice>
+        <name>CircleImageView</name>
+        <url>https://github.com/hdodenhof/CircleImageView</url>
+        <copyright>Copyright 2014-2018 Henning Dodenhof</copyright>
+        <license>Apache Software License 2.0</license>
+    </notice>
+
+    <notice>
+        <name>CustomTabsHelper</name>
+        <url>https://github.com/zhanghai/CustomTabsHelper</url>
+        <copyright>Copyright 2015 Zhang Hai</copyright>
+        <license>Apache Software License 2.0</license>
+    </notice>
+
+    <notice>
+        <name>EffortlessPermissions</name>
+        <url>https://github.com/zhanghai/EffortlessPermissions</url>
+        <copyright>Copyright 2017 Zhang Hai</copyright>
+        <license>Apache Software License 2.0</license>
+    </notice>
+
+    <notice>
+        <name>MaterialEditText</name>
+        <url>https://github.com/zhanghai/MaterialEditText</url>
+        <copyright>Copyright 2015 Zhang Hai</copyright>
+        <license>Apache Software License 2.0</license>
+    </notice>
+
+    <notice>
+        <name>MaterialPlayPauseDrawable</name>
+        <url>https://github.com/zhanghai/MaterialPlayPauseDrawable</url>
+        <copyright>Copyright 2018 Zhang Hai</copyright>
+        <license>Apache Software License 2.0</license>
+    </notice>
+
+    <notice>
+        <name>MaterialProgressBar</name>
+        <url>https://github.com/zhanghai/MaterialProgressBar</url>
+        <copyright>Copyright 2015 Zhang Hai</copyright>
+        <license>Apache Software License 2.0</license>
+    </notice>
+
+    <notice>
+        <name>MaterialRatingBar</name>
+        <url>https://github.com/zhanghai/MaterialRatingBar</url>
+        <copyright>Copyright 2016 Zhang Hai</copyright>
+        <license>Apache Software License 2.0</license>
+    </notice>
+
+    <notice>
+        <name>SystemUiHelper</name>
+        <url>https://github.com/zhanghai/SystemUiHelper</url>
+        <copyright>Copyright 2015 Zhang Hai</copyright>
         <license>Apache Software License 2.0</license>
     </notice>
 
@@ -67,34 +151,6 @@
         <name>EventBus</name>
         <url>https://github.com/greenrobot/EventBus</url>
         <copyright>Copyright 2012 greenrobot</copyright>
-        <license>Apache Software License 2.0</license>
-    </notice>
-
-    <notice>
-        <name>CustomTabsHelper</name>
-        <url>https://github.com/DreaminginCodeZH/CustomTabsHelper</url>
-        <copyright>Copyright 2015 Zhang Hai</copyright>
-        <license>Apache Software License 2.0</license>
-    </notice>
-
-    <notice>
-        <name>MaterialEditText</name>
-        <url>https://github.com/DreaminginCodeZH/MaterialEditText</url>
-        <copyright>Copyright 2015 Zhang Hai</copyright>
-        <license>Apache Software License 2.0</license>
-    </notice>
-
-    <notice>
-        <name>MaterialProgressBar</name>
-        <url>https://github.com/DreaminginCodeZH/MaterialProgressBar</url>
-        <copyright>Copyright 2015 Zhang Hai</copyright>
-        <license>Apache Software License 2.0</license>
-    </notice>
-
-    <notice>
-        <name>SystemUiHelper</name>
-        <url>https://github.com/DreaminginCodeZH/SystemUiHelper</url>
-        <copyright>Copyright 2015 Zhang Hai</copyright>
         <license>Apache Software License 2.0</license>
     </notice>
 </notices>

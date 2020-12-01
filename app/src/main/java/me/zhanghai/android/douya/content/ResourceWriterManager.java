@@ -5,6 +5,7 @@
 
 package me.zhanghai.android.douya.content;
 
+import android.app.Service;
 import android.content.Context;
 
 import java.util.ArrayList;
@@ -21,7 +22,7 @@ public class ResourceWriterManager<T extends ResourceWriter> {
     private List<T> mPendingWriters = new ArrayList<>();
     private List<T> mRunningWriters = new ArrayList<>();
     private List<T> mUnmodifiableWriters = Collections.unmodifiableList(
-            CollectionUtils.union(mRunningWriters, mPendingWriters));
+            CollectionUtils.join(mRunningWriters, mPendingWriters));
 
     public void onBind(ResourceWriterService service) {
 
@@ -64,13 +65,17 @@ public class ResourceWriterManager<T extends ResourceWriter> {
         return mService;
     }
 
+    public Service getService() {
+        return mService;
+    }
+
     protected void add(T writer, Context context) {
         if (isBound()) {
             mRunningWriters.add(writer);
             writer.onStart();
         } else {
             mPendingWriters.add(writer);
-            context.startService(ResourceWriterService.makeIntent(context));
+            ResourceWriterService.start(context);
         }
     }
 

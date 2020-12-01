@@ -11,6 +11,7 @@ import android.text.TextUtils;
 
 import com.google.gson.annotations.SerializedName;
 
+// TODO: Extend from BaseItem.
 public class Diary implements Parcelable {
 
     public enum Visibility {
@@ -48,7 +49,7 @@ public class Diary implements Parcelable {
     @SerializedName("allow_donate")
     public boolean allowDonate;
 
-    public User author;
+    public SimpleUser author;
 
     @SerializedName("comments_count")
     public int commentCount;
@@ -57,7 +58,7 @@ public class Diary implements Parcelable {
     public String cover;
 
     @SerializedName("create_time")
-    public String createdAt;
+    public String creationTime;
 
     /**
      * @deprecated Use {@link #getVisibility()} instead.
@@ -87,7 +88,7 @@ public class Diary implements Parcelable {
     public String type;
 
     @SerializedName("update_time")
-    public String updatedAt;
+    public String updateTime;
 
     public String uri;
 
@@ -116,10 +117,10 @@ public class Diary implements Parcelable {
         abstract_ = in.readString();
         allowComment = in.readByte() != 0;
         allowDonate = in.readByte() != 0;
-        author = in.readParcelable(User.class.getClassLoader());
+        author = in.readParcelable(SimpleUser.class.getClassLoader());
         commentCount = in.readInt();
         cover = in.readString();
-        createdAt = in.readString();
+        creationTime = in.readString();
         //noinspection deprecation
         visibility = in.readString();
         donationCount = in.readInt();
@@ -130,7 +131,7 @@ public class Diary implements Parcelable {
         shareUrl = in.readString();
         title = in.readString();
         type = in.readString();
-        updatedAt = in.readString();
+        updateTime = in.readString();
         uri = in.readString();
         url = in.readString();
     }
@@ -148,7 +149,7 @@ public class Diary implements Parcelable {
         dest.writeParcelable(author, flags);
         dest.writeInt(commentCount);
         dest.writeString(cover);
-        dest.writeString(createdAt);
+        dest.writeString(creationTime);
         //noinspection deprecation
         dest.writeString(visibility);
         dest.writeInt(donationCount);
@@ -159,7 +160,7 @@ public class Diary implements Parcelable {
         dest.writeString(shareUrl);
         dest.writeString(title);
         dest.writeString(type);
-        dest.writeString(updatedAt);
+        dest.writeString(updateTime);
         dest.writeString(uri);
         dest.writeString(url);
     }

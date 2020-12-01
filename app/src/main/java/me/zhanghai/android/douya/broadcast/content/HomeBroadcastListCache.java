@@ -14,13 +14,13 @@ import com.google.gson.reflect.TypeToken;
 import java.util.ArrayList;
 import java.util.List;
 
-import me.zhanghai.android.douya.network.api.info.apiv2.Broadcast;
+import me.zhanghai.android.douya.network.api.info.frodo.Broadcast;
 import me.zhanghai.android.douya.util.Callback;
 import me.zhanghai.android.douya.util.DiskCacheHelper;
 
 public class HomeBroadcastListCache {
 
-    private static final int MAX_LIST_SIZE = 20;
+    public static final int MAX_LIST_SIZE = 20;
 
     private static final String KEY_PREFIX = HomeBroadcastListCache.class.getName();
 

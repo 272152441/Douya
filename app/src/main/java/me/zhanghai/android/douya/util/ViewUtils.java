@@ -7,6 +7,7 @@ package me.zhanghai.android.douya.util;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
+import android.app.Activity;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
@@ -14,9 +15,23 @@ import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
-import android.support.design.widget.TextInputLayout;
-import android.support.v4.view.animation.FastOutLinearInInterpolator;
-import android.support.v4.view.animation.FastOutSlowInInterpolator;
+import android.os.Build;
+import androidx.annotation.AnyRes;
+import androidx.annotation.AttrRes;
+import androidx.annotation.Dimension;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.Px;
+import androidx.annotation.StyleRes;
+import com.google.android.material.textfield.TextInputLayout;
+import androidx.core.util.ObjectsCompat;
+import androidx.core.view.MarginLayoutParamsCompat;
+import androidx.core.view.ViewCompat;
+import androidx.interpolator.view.animation.FastOutLinearInInterpolator;
+import androidx.interpolator.view.animation.FastOutSlowInInterpolator;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.appcompat.content.res.AppCompatResources;
+import androidx.appcompat.view.ContextThemeWrapper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.DisplayMetrics;
@@ -26,14 +41,20 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import me.zhanghai.android.douya.R;
+import me.zhanghai.android.douya.functional.compat.BooleanSupplier;
 import me.zhanghai.android.douya.ui.ClickableMovementMethod;
+import me.zhanghai.android.douya.ui.LinkArrowKeyMovementMethod;
 
 public class ViewUtils {
 
-    public static void fadeOut(final View view, int duration, final boolean gone,
-                               final Runnable nextRunnable) {
+    private ViewUtils() {}
+
+    public static void fadeOut(@NonNull View view, int duration, boolean gone,
+                               @Nullable Runnable nextRunnable) {
         if (view.getVisibility() != View.VISIBLE || view.getAlpha() == 0) {
             // Cancel any starting animation.
             view.animate()
@@ -53,11 +74,11 @@ public class ViewUtils {
                 .setListener(new AnimatorListenerAdapter() {
                     private boolean mCanceled = false;
                     @Override
-                    public void onAnimationCancel(Animator animator) {
+                    public void onAnimationCancel(@NonNull Animator animator) {
                         mCanceled = true;
                     }
                     @Override
-                    public void onAnimationEnd(Animator animator) {
+                    public void onAnimationEnd(@NonNull Animator animator) {
                         if (!mCanceled) {
                             view.setVisibility(gone ? View.GONE : View.INVISIBLE);
                             if (nextRunnable != null) {
@@ -69,19 +90,19 @@ public class ViewUtils {
                 .start();
     }
 
-    public static void fadeOut(View view, int duration, boolean gone) {
+    public static void fadeOut(@NonNull View view, int duration, boolean gone) {
         fadeOut(view, duration, gone, null);
     }
 
-    public static void fadeOut(View view, boolean gone) {
+    public static void fadeOut(@NonNull View view, boolean gone) {
         fadeOut(view, getShortAnimTime(view), gone);
     }
 
-    public static void fadeOut(View view) {
+    public static void fadeOut(@NonNull View view) {
         fadeOut(view, true);
     }
 
-    public static void fadeIn(View view, int duration) {
+    public static void fadeIn(@NonNull View view, int duration) {
         if (view.getVisibility() == View.VISIBLE && view.getAlpha() == 1) {
             // Cancel any starting animation.
             view.animate()
@@ -90,7 +111,7 @@ public class ViewUtils {
                     .start();
             return;
         }
-        view.setAlpha(0);
+        view.setAlpha(isVisible(view) ? view.getAlpha() : 0);
         view.setVisibility(View.VISIBLE);
         view.animate()
                 .alpha(1)
@@ -101,11 +122,11 @@ public class ViewUtils {
                 .start();
     }
 
-    public static void fadeIn(View view) {
+    public static void fadeIn(@NonNull View view) {
         fadeIn(view, getShortAnimTime(view));
     }
 
-    public static void fadeToVisibility(View view, boolean visible, boolean gone) {
+    public static void fadeToVisibility(@NonNull View view, boolean visible, boolean gone) {
         if (visible) {
             fadeIn(view);
         } else {
@@ -113,185 +134,543 @@ public class ViewUtils {
         }
     }
 
-    public static void fadeToVisibility(View view, boolean visible) {
+    public static void fadeToVisibility(@NonNull View view, boolean visible) {
         fadeToVisibility(view, visible, true);
     }
 
-    public static void crossfade(View fromView, View toView, int duration, boolean gone) {
+    public static void crossfade(@NonNull View fromView, @NonNull View toView, int duration,
+                                 boolean gone) {
         fadeOut(fromView, duration, gone);
         fadeIn(toView, duration);
     }
 
-    public static void crossfade(View fromView, View toView, boolean gone) {
+    public static void crossfade(@NonNull View fromView, @NonNull View toView, boolean gone) {
         crossfade(fromView, toView, getShortAnimTime(fromView), gone);
     }
 
-    public static void crossfade(View fromView, View toView) {
+    public static void crossfade(@NonNull View fromView, @NonNull View toView) {
         crossfade(fromView, toView, true);
     }
 
-    public static void fadeOutThenFadeIn(final View fromView, final View toView, final int duration,
-                                         final boolean gone) {
-        fadeOut(fromView, duration, gone, new Runnable() {
-            @Override
-            public void run() {
-                fadeIn(toView, duration);
-            }
-        });
+    public static void fadeOutThenFadeIn(@NonNull View fromView, @NonNull View toView, int duration,
+                                         boolean gone) {
+        fadeOut(fromView, duration, gone, () -> fadeIn(toView, duration));
     }
 
-    public static void fadeOutThenFadeIn(View fromView, View toView, boolean gone) {
+    public static void fadeOutThenFadeIn(@NonNull View fromView, @NonNull View toView,
+                                         boolean gone) {
         fadeOutThenFadeIn(fromView, toView, getShortAnimTime(fromView), gone);
     }
 
-    public static void fadeOutThenFadeIn(final View fromView, final View toView) {
+    public static void fadeOutThenFadeIn(@NonNull View fromView, @NonNull View toView) {
         fadeOutThenFadeIn(fromView, toView, true);
     }
 
-    public static float dpToPx(float dp, Context context) {
+    @Dimension
+    public static float dpToPx(@Dimension(unit = Dimension.DP) float dp, @NonNull Context context) {
         DisplayMetrics metrics = context.getResources().getDisplayMetrics();
         return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, metrics);
     }
 
-    public static int dpToPxInt(float dp, Context context) {
-        return Math.round(dpToPx(dp, context));
+    @Px
+    public static int dpToPxOffset(@Dimension(unit = Dimension.DP) float dp,
+                                   @NonNull Context context) {
+        return (int) dpToPx(dp, context);
     }
 
-    public static int getColorFromAttrRes(int attrRes, int defValue, Context context) {
-        int[] attrs = new int[] {attrRes};
-        TypedArray a = context.obtainStyledAttributes(attrs);
-        int color = a.getColor(0, defValue);
-        a.recycle();
-        return color;
+    @Px
+    public static int dpToPxSize(@Dimension(unit = Dimension.DP) float dp,
+                                 @NonNull Context context) {
+        float value = dpToPx(dp, context);
+        int size = (int) (value >= 0 ? value + 0.5f : value - 0.5f);
+        if (size != 0) {
+            return size;
+        } else if (value == 0) {
+            return 0;
+        } else if (value > 0) {
+            return 1;
+        } else {
+            return -1;
+        }
     }
 
-    public static ColorStateList getColorStateListFromAttrRes(int attrRes, Context context) {
-        int[] attrs = new int[] {attrRes};
-        TypedArray a = context.obtainStyledAttributes(attrs);
-        ColorStateList colorStateList = a.getColorStateList(0);
-        a.recycle();
-        return colorStateList;
+    public static boolean getBooleanFromAttrRes(@AttrRes int attrRes, boolean defaultValue,
+                                                @NonNull Context context) {
+        TypedArray a = context.obtainStyledAttributes(new int[] { attrRes });
+        try {
+            return a.getBoolean(0, defaultValue);
+        } finally {
+            a.recycle();
+        }
     }
 
-    public static Drawable getDrawableFromAttrRes(int attrRes, Context context) {
-        int[] attrs = new int[] {attrRes};
-        TypedArray a = context.obtainStyledAttributes(attrs);
-        Drawable drawable = a.getDrawable(0);
-        a.recycle();
-        return drawable;
+    public static int getColorFromAttrRes(@AttrRes int attrRes, int defaultValue,
+                                          @NonNull Context context) {
+        // If attrRes points to a color state list, we need to use the compat parsing.
+        ColorStateList colorStateList = getColorStateListFromAttrRes(attrRes, context);
+        if (colorStateList == null) {
+            return defaultValue;
+        }
+        return colorStateList.getDefaultColor();
     }
 
-    public static int getShortAnimTime(Resources resources) {
+    @Nullable
+    public static ColorStateList getColorStateListFromAttrRes(@AttrRes int attrRes,
+                                                              @NonNull Context context) {
+        // TODO: Switch to TintTypedArray when they added this overload.
+        TypedArray a = context.obtainStyledAttributes(new int[] { attrRes });
+        try {
+            // 0 is an invalid identifier according to the docs of {@link Resources}.
+            int resId = a.getResourceId(0, 0);
+            if (resId != 0) {
+                return AppCompatResources.getColorStateList(context, resId);
+            }
+            return a.getColorStateList(0);
+        } finally {
+            a.recycle();
+        }
+    }
+
+    @Dimension
+    public static float getDimensionFromAttrRes(@AttrRes int attrRes, float defaultValue,
+                                                @NonNull Context context) {
+        TypedArray a = context.obtainStyledAttributes(new int[] { attrRes });
+        try {
+            return a.getDimension(0, defaultValue);
+        } finally {
+            a.recycle();
+        }
+    }
+
+    @Px
+    public static int getDimensionPixelOffsetFromAttrRes(@AttrRes int attrRes, int defaultValue,
+                                                         @NonNull Context context) {
+        TypedArray a = context.obtainStyledAttributes(new int[] { attrRes });
+        try {
+            return a.getDimensionPixelOffset(0, defaultValue);
+        } finally {
+            a.recycle();
+        }
+    }
+
+    @Px
+    public static int getDimensionPixelSizeFromAttrRes(@AttrRes int attrRes, int defaultValue,
+                                                       @NonNull Context context) {
+        TypedArray a = context.obtainStyledAttributes(new int[] { attrRes });
+        try {
+            return a.getDimensionPixelSize(0, defaultValue);
+        } finally {
+            a.recycle();
+        }
+    }
+
+    @Nullable
+    public static Drawable getDrawableFromAttrRes(@AttrRes int attrRes, @NonNull Context context) {
+        // TODO: Switch to TintTypedArray when they added this overload.
+        TypedArray a = context.obtainStyledAttributes(new int[] { attrRes });
+        try {
+            // 0 is an invalid identifier according to the docs of {@link Resources}.
+            int resId = a.getResourceId(0, 0);
+            if (resId != 0) {
+                return AppCompatResources.getDrawable(context, resId);
+            }
+            return null;
+        } finally {
+            a.recycle();
+        }
+    }
+
+    public static float getFloatFromAttrRes(@AttrRes int attrRes, float defaultValue,
+                                            @NonNull Context context) {
+        TypedArray a = context.obtainStyledAttributes(new int[] { attrRes });
+        try {
+            return a.getFloat(0, defaultValue);
+        } finally {
+            a.recycle();
+        }
+    }
+
+    @AnyRes
+    public static int getResIdFromAttrRes(@AttrRes int attrRes, int defaultValue,
+                                          @NonNull Context context) {
+        // TODO: Switch to TintTypedArray when they added this overload.
+        TypedArray a = context.obtainStyledAttributes(new int[] { attrRes });
+        try {
+            return a.getResourceId(0, defaultValue);
+        } finally {
+            a.recycle();
+        }
+    }
+
+    public static int getShortAnimTime(@NonNull Resources resources) {
         return resources.getInteger(android.R.integer.config_shortAnimTime);
     }
 
-    public static int getShortAnimTime(View view) {
+    public static int getShortAnimTime(@NonNull View view) {
         return getShortAnimTime(view.getResources());
     }
 
-    public static int getShortAnimTime(Context context) {
+    public static int getShortAnimTime(@NonNull Context context) {
         return getShortAnimTime(context.getResources());
     }
 
-    public static int getMediumAnimTime(Resources resources) {
+    public static int getMediumAnimTime(@NonNull Resources resources) {
         return resources.getInteger(android.R.integer.config_mediumAnimTime);
     }
 
-    public static int getMediumAnimTime(View view) {
+    public static int getMediumAnimTime(@NonNull View view) {
         return getMediumAnimTime(view.getResources());
     }
 
-    public static int getMediumAnimTime(Context context) {
+    public static int getMediumAnimTime(@NonNull Context context) {
         return getMediumAnimTime(context.getResources());
     }
 
-    public static int getLongAnimTime(Resources resources) {
+    public static int getLongAnimTime(@NonNull Resources resources) {
         return resources.getInteger(android.R.integer.config_longAnimTime);
     }
 
-    public static int getLongAnimTime(View view) {
+    public static int getLongAnimTime(@NonNull View view) {
         return getLongAnimTime(view.getResources());
     }
 
-    public static int getLongAnimTime(Context context) {
+    public static int getLongAnimTime(@NonNull Context context) {
         return getLongAnimTime(context.getResources());
     }
 
-    private static boolean hasSwDp(int dp, Context context) {
+    public static int getDisplayWidth(@NonNull Context context) {
+        return context.getResources().getDisplayMetrics().widthPixels;
+    }
+
+    public static int getDisplayHeight(@NonNull Context context) {
+        return context.getResources().getDisplayMetrics().heightPixels;
+    }
+
+    public static int getMarginStart(@NonNull View view) {
+        return MarginLayoutParamsCompat.getMarginStart(
+                (ViewGroup.MarginLayoutParams) view.getLayoutParams());
+    }
+
+    public static int getMarginEnd(@NonNull View view) {
+        return MarginLayoutParamsCompat.getMarginEnd(
+                (ViewGroup.MarginLayoutParams) view.getLayoutParams());
+    }
+
+    public static int getMarginLeft(@NonNull View view) {
+        return ((ViewGroup.MarginLayoutParams) view.getLayoutParams()).leftMargin;
+    }
+
+    public static int getMarginRight(@NonNull View view) {
+        return ((ViewGroup.MarginLayoutParams) view.getLayoutParams()).rightMargin;
+    }
+
+    public static int getMarginTop(@NonNull View view) {
+        return ((ViewGroup.MarginLayoutParams) view.getLayoutParams()).topMargin;
+    }
+
+    public static int getMarginBottom(@NonNull View view) {
+        return ((ViewGroup.MarginLayoutParams) view.getLayoutParams()).bottomMargin;
+    }
+
+    public static int getWidthExcludingPadding(@NonNull View view) {
+        return Math.max(0, view.getWidth() - view.getPaddingLeft() - view.getPaddingRight());
+    }
+
+    public static int getHeightExcludingPadding(@NonNull View view) {
+        return Math.max(0, view.getHeight() - view.getPaddingTop() - view.getPaddingBottom());
+    }
+
+    private static boolean hasSwDp(@Dimension(unit = Dimension.DP) int dp, @NonNull Context context) {
         return context.getResources().getConfiguration().smallestScreenWidthDp >= dp;
     }
 
-    public static boolean hasSw600Dp(Context context) {
+    public static boolean hasSw600Dp(@NonNull Context context) {
         return hasSwDp(600, context);
     }
 
-    private static boolean hasWDp(int dp, Context context) {
+    private static boolean hasWDp(@Dimension(unit = Dimension.DP) int dp, @NonNull Context context) {
         return context.getResources().getConfiguration().screenWidthDp >= dp;
     }
 
-    public static boolean hasW600Dp(Context context) {
+    public static boolean hasW600Dp(@NonNull Context context) {
         return hasWDp(600, context);
     }
 
-    public static boolean hasW960Dp(Context context) {
+    public static boolean hasW960Dp(@NonNull Context context) {
         return hasWDp(960, context);
     }
 
-    public static void hideTextInputLayoutErrorOnTextChange(EditText editText,
-                                                            final TextInputLayout textInputLayout) {
-
+    public static void hideTextInputLayoutErrorOnTextChange(
+            @NonNull EditText editText, @NonNull TextInputLayout textInputLayout) {
         editText.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(@NonNull CharSequence s, int start, int count,
+                                          int after) {}
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            public void onTextChanged(@NonNull CharSequence s, int start, int before, int count) {}
             @Override
-            public void afterTextChanged(Editable s) {
+            public void afterTextChanged(@NonNull Editable s) {
                 textInputLayout.setError(null);
             }
         });
     }
 
-    public static View inflate(int resource, ViewGroup parent) {
-        return LayoutInflater.from(parent.getContext()).inflate(resource, parent, false);
+    @NonNull
+    public static View inflate(int resource, @NonNull Context context) {
+        return inflate(resource, null, false, context);
     }
 
-    public static boolean isInLandscape(Context context) {
+    @NonNull
+    public static View inflate(int resource, @NonNull ViewGroup parent) {
+        return inflate(resource, parent, false, parent.getContext());
+    }
+
+    @NonNull
+    public static View inflateWithTheme(int resource, @NonNull Context context,
+                                        @StyleRes int themeRes) {
+        if (themeRes != 0) {
+            context = new ContextThemeWrapper(context, themeRes);
+        }
+        return inflate(resource, null, false, context);
+    }
+
+    @NonNull
+    public static View inflateWithTheme(int resource, @NonNull ViewGroup parent,
+                                        @StyleRes int themeRes) {
+        Context context = parent.getContext();
+        if (themeRes != 0) {
+            context = new ContextThemeWrapper(context, themeRes);
+        }
+        return inflate(resource, parent, false, context);
+    }
+
+    @NonNull
+    public static View inflateInto(int resource, @NonNull ViewGroup parent) {
+        return inflate(resource, parent, true, parent.getContext());
+    }
+
+    @NonNull
+    public static View inflateIntoWithTheme(int resource, @NonNull ViewGroup parent,
+                                            @StyleRes int themeRes) {
+        return inflate(resource, parent, true, new ContextThemeWrapper(parent.getContext(),
+                themeRes));
+    }
+
+    @NonNull
+    private static View inflate(int resource, @Nullable ViewGroup parent, boolean attachToRoot,
+                                @NonNull Context context) {
+        return LayoutInflater.from(context).inflate(resource, parent, attachToRoot);
+    }
+
+    public static boolean isLightTheme(@NonNull Context context) {
+        return getBooleanFromAttrRes(R.attr.isLightTheme, false, context);
+    }
+
+    public static boolean isInPortait(@NonNull Context context) {
+        return context.getResources().getConfiguration().orientation
+                == Configuration.ORIENTATION_PORTRAIT;
+    }
+
+    public static boolean isInLandscape(@NonNull Context context) {
         return context.getResources().getConfiguration().orientation
                 == Configuration.ORIENTATION_LANDSCAPE;
     }
 
-    public static boolean isVisible(View view) {
+    public static boolean isVisible(@NonNull View view) {
         return view.getVisibility() == View.VISIBLE;
     }
 
-    public static void postOnPreDraw(final View view, final Runnable runnable) {
-        view.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+    public static void postOnDrawerClosed(@NonNull DrawerLayout drawerLayout,
+                                          @NonNull Runnable runnable) {
+        drawerLayout.addDrawerListener(new DrawerLayout.SimpleDrawerListener() {
             @Override
-            public boolean onPreDraw() {
-                view.getViewTreeObserver().removeOnPreDrawListener(this);
+            public void onDrawerClosed(View drawerView) {
+                drawerLayout.removeDrawerListener(this);
                 runnable.run();
-                return true;
             }
         });
     }
 
-    public static float pxToDp(float px, Context context) {
+    public static void postOnPreDraw(@NonNull View view, @NonNull Runnable runnable) {
+        view.getViewTreeObserver().addOnPreDrawListener(new OnPreDrawListenerRunnableWrapper(
+                view, runnable));
+    }
+
+    public static void removeOnPreDraw(@NonNull View view, @NonNull Runnable runnable) {
+        view.getViewTreeObserver().removeOnPreDrawListener(new OnPreDrawListenerRunnableWrapper(
+                view, runnable));
+    }
+
+    private static class OnPreDrawListenerRunnableWrapper
+            implements ViewTreeObserver.OnPreDrawListener {
+
+        @NonNull
+        private final View mView;
+        @NonNull
+        private final Runnable mRunnable;
+
+        public OnPreDrawListenerRunnableWrapper(@NonNull View view, @NonNull Runnable runnable) {
+            mView = view;
+            mRunnable = runnable;
+        }
+
+        @Override
+        public boolean onPreDraw() {
+            mView.getViewTreeObserver().removeOnPreDrawListener(this);
+            mRunnable.run();
+            return true;
+        }
+
+        @Override
+        public boolean equals(@Nullable Object object) {
+            if (this == object) {
+                return true;
+            }
+            if (object == null || getClass() != object.getClass()) {
+                return false;
+            }
+            OnPreDrawListenerRunnableWrapper that = (OnPreDrawListenerRunnableWrapper) object;
+            return ObjectsCompat.equals(mRunnable, that.mRunnable);
+        }
+
+        @Override
+        public int hashCode() {
+            return mRunnable.hashCode();
+        }
+    }
+
+    public static void postOnPreDraw(@NonNull View view, @NonNull BooleanSupplier runnable) {
+        view.getViewTreeObserver().addOnPreDrawListener(new OnPreDrawListenerBooleanSupplierWrapper(
+                view, runnable));
+    }
+
+    public static void removeOnPreDraw(@NonNull View view, @NonNull BooleanSupplier runnable) {
+        view.getViewTreeObserver().removeOnPreDrawListener(
+                new OnPreDrawListenerBooleanSupplierWrapper(view, runnable));
+    }
+
+    private static class OnPreDrawListenerBooleanSupplierWrapper
+            implements ViewTreeObserver.OnPreDrawListener {
+
+        @NonNull
+        private final View mView;
+        @NonNull
+        private final BooleanSupplier mRunnable;
+
+        public OnPreDrawListenerBooleanSupplierWrapper(@NonNull View view,
+                                                       @NonNull BooleanSupplier runnable) {
+            mView = view;
+            mRunnable = runnable;
+        }
+
+        @Override
+        public boolean onPreDraw() {
+            mView.getViewTreeObserver().removeOnPreDrawListener(this);
+            return mRunnable.getAsBoolean();
+        }
+
+        @Override
+        public boolean equals(@Nullable Object object) {
+            if (this == object) {
+                return true;
+            }
+            if (object == null || getClass() != object.getClass()) {
+                return false;
+            }
+            OnPreDrawListenerRunnableWrapper that = (OnPreDrawListenerRunnableWrapper) object;
+            return ObjectsCompat.equals(mRunnable, that.mRunnable);
+        }
+
+        @Override
+        public int hashCode() {
+            return mRunnable.hashCode();
+        }
+    }
+
+    @Dimension(unit = Dimension.DP)
+    public static float pxToDp(@Dimension float px, @NonNull Context context) {
         DisplayMetrics metrics = context.getResources().getDisplayMetrics();
         return px / metrics.density;
     }
 
-    public static int pxToDpInt(float px, Context context) {
+    @Dimension(unit = Dimension.DP)
+    public static int pxToDpInt(@Dimension float px, @NonNull Context context) {
         return Math.round(pxToDp(px, context));
     }
 
-    public static void replaceChild(ViewGroup viewGroup, View oldChild, View newChild) {
+    public static void replaceChild(@NonNull ViewGroup viewGroup, @NonNull View oldChild,
+                                    @NonNull View newChild) {
         int index = viewGroup.indexOfChild(oldChild);
         viewGroup.removeViewAt(index);
         viewGroup.addView(newChild, index);
     }
 
-    public static void setHeight(View view, int height) {
+    public static void setBackgroundPreservingPadding(@NonNull View view,
+                                                      @Nullable Drawable background) {
+        int savedPaddingStart = ViewCompat.getPaddingStart(view);
+        int savedPaddingEnd = ViewCompat.getPaddingEnd(view);
+        int savedPaddingTop = view.getPaddingTop();
+        int savedPaddingBottom = view.getPaddingBottom();
+        view.setBackground(background);
+        ViewCompat.setPaddingRelative(view, savedPaddingStart, savedPaddingTop, savedPaddingEnd,
+                savedPaddingBottom);
+    }
+
+    public static void setMargin(@NonNull View view, int left, int top, int right, int bottom) {
+        ViewGroup.MarginLayoutParams layoutParams =
+                (ViewGroup.MarginLayoutParams) view.getLayoutParams();
+        layoutParams.leftMargin = left;
+        layoutParams.topMargin = top;
+        layoutParams.rightMargin = right;
+        layoutParams.bottomMargin = bottom;
+    }
+
+    public static void setMarginRelative(@NonNull View view, int start, int top, int end,
+                                         int bottom) {
+        ViewGroup.MarginLayoutParams layoutParams =
+                (ViewGroup.MarginLayoutParams) view.getLayoutParams();
+        MarginLayoutParamsCompat.setMarginStart(layoutParams, start);
+        layoutParams.topMargin = top;
+        MarginLayoutParamsCompat.setMarginEnd(layoutParams, end);
+        layoutParams.bottomMargin = bottom;
+    }
+
+    public static void setMarginStart(@NonNull View view, int marginStart) {
+        MarginLayoutParamsCompat.setMarginStart(
+                (ViewGroup.MarginLayoutParams) view.getLayoutParams(), marginStart);
+    }
+
+    public static void setMarginEnd(@NonNull View view, int marginEnd) {
+        MarginLayoutParamsCompat.setMarginEnd((ViewGroup.MarginLayoutParams) view.getLayoutParams(),
+                marginEnd);
+    }
+
+    public static void setMarginLeft(@NonNull View view, int marginLeft) {
+        ((ViewGroup.MarginLayoutParams) view.getLayoutParams()).leftMargin = marginLeft;
+    }
+
+    public static void setMarginRight(@NonNull View view, int marginRight) {
+        ((ViewGroup.MarginLayoutParams) view.getLayoutParams()).rightMargin = marginRight;
+    }
+
+    public static void setMarginTop(@NonNull View view, int marginTop) {
+        ((ViewGroup.MarginLayoutParams) view.getLayoutParams()).topMargin = marginTop;
+    }
+
+    public static void setMarginBottom(@NonNull View view, int marginBottom) {
+        ((ViewGroup.MarginLayoutParams) view.getLayoutParams()).bottomMargin = marginBottom;
+    }
+
+    public static void setWidth(@NonNull View view, int width) {
+        ViewGroup.LayoutParams layoutParams = view.getLayoutParams();
+        if (layoutParams.width == width) {
+            return;
+        }
+        layoutParams.width = width;
+        view.setLayoutParams(layoutParams);
+    }
+
+    public static void setHeight(@NonNull View view, int height) {
         ViewGroup.LayoutParams layoutParams = view.getLayoutParams();
         if (layoutParams.height == height) {
             return;
@@ -300,7 +679,7 @@ public class ViewUtils {
         view.setLayoutParams(layoutParams);
     }
 
-    public static void setSize(View view, int size) {
+    public static void setSize(@NonNull View view, int size) {
         ViewGroup.LayoutParams layoutParams = view.getLayoutParams();
         if (layoutParams.width == size && layoutParams.height == size) {
             return;
@@ -310,7 +689,66 @@ public class ViewUtils {
         view.setLayoutParams(layoutParams);
     }
 
-    public static void setTextViewBold(TextView textView, boolean bold) {
+    public static void setWeight(@NonNull View view, float weight) {
+        LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) view.getLayoutParams();
+        layoutParams.weight = weight;
+        view.setLayoutParams(layoutParams);
+    }
+
+    public static void setPaddingStart(@NonNull View view, int paddingStart) {
+        ViewCompat.setPaddingRelative(view, paddingStart, view.getPaddingTop(),
+                ViewCompat.getPaddingEnd(view), view.getPaddingBottom());
+    }
+
+    public static void setPaddingEnd(@NonNull View view, int paddingEnd) {
+        ViewCompat.setPaddingRelative(view, ViewCompat.getPaddingStart(view), view.getPaddingTop(),
+                paddingEnd, view.getPaddingBottom());
+    }
+
+    public static void setPaddingLeft(@NonNull View view, int paddingLeft) {
+        view.setPadding(paddingLeft, view.getPaddingTop(), view.getPaddingRight(),
+                view.getPaddingBottom());
+    }
+
+    public static void setPaddingRight(@NonNull View view, int paddingRight) {
+        view.setPadding(view.getPaddingLeft(), view.getPaddingTop(), paddingRight,
+                view.getPaddingBottom());
+    }
+
+    public static void setPaddingTop(@NonNull View view, int paddingTop) {
+        view.setPadding(view.getPaddingLeft(), paddingTop, view.getPaddingRight(),
+                view.getPaddingBottom());
+    }
+
+    public static void setPaddingBottom(@NonNull View view, int paddingBottom) {
+        view.setPadding(view.getPaddingLeft(), view.getPaddingTop(), view.getPaddingRight(),
+                paddingBottom);
+    }
+
+    public static void setLayoutFullscreen(@NonNull View view) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            view.setSystemUiVisibility(view.getSystemUiVisibility()
+                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+        }
+    }
+
+    public static void setLayoutFullscreen(@NonNull Activity activity) {
+        setLayoutFullscreen(activity.getWindow().getDecorView());
+    }
+
+    public static void setLayoutHideNavigation(@NonNull View view) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            view.setSystemUiVisibility(view.getSystemUiVisibility()
+                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+        }
+    }
+
+    public static void setLayoutHideNavigation(@NonNull Activity activity) {
+        setLayoutHideNavigation(activity.getWindow().getDecorView());
+    }
+
+    public static void setTextViewBold(@NonNull TextView textView, boolean bold) {
 
         Typeface typeface = textView.getTypeface();
         if (typeface.isBold() == bold) {
@@ -331,7 +769,7 @@ public class ViewUtils {
         }
     }
 
-    public static void setTextViewItalic(TextView textView, boolean italic) {
+    public static void setTextViewItalic(@NonNull TextView textView, boolean italic) {
 
         Typeface typeface = textView.getTypeface();
         if (typeface.isItalic() == italic) {
@@ -353,28 +791,25 @@ public class ViewUtils {
     }
 
     public static void setTextViewLinkClickable(TextView textView) {
+        boolean wasClickable = textView.isClickable();
+        boolean wasLongClickable = textView.isLongClickable();
         textView.setMovementMethod(ClickableMovementMethod.getInstance());
         // Reset for TextView.fixFocusableAndClickableSettings(). We don't want View.onTouchEvent()
         // to consume touch events.
-        textView.setFocusable(false);
-        textView.setClickable(false);
-        textView.setLongClickable(false);
+        textView.setClickable(wasClickable);
+        textView.setLongClickable(wasLongClickable);
     }
 
-    public static void setVisibleOrGone(View view, boolean visible) {
+    public static void setTextViewLinkClickableAndTextSelectable(TextView textView) {
+        textView.setTextIsSelectable(true);
+        textView.setMovementMethod(LinkArrowKeyMovementMethod.getInstance());
+    }
+
+    public static void setVisibleOrGone(@NonNull View view, boolean visible) {
         view.setVisibility(visible ? View.VISIBLE : View.GONE);
     }
 
-    public static void setVisibleOrInvisible(View view, boolean visible) {
+    public static void setVisibleOrInvisible(@NonNull View view, boolean visible) {
         view.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
-    }
-
-    public static void setWidth(View view, int width) {
-        ViewGroup.LayoutParams layoutParams = view.getLayoutParams();
-        if (layoutParams.width == width) {
-            return;
-        }
-        layoutParams.width = width;
-        view.setLayoutParams(layoutParams);
     }
 }

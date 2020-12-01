@@ -15,16 +15,16 @@ import com.google.gson.annotations.SerializedName;
 import java.util.ArrayList;
 
 import me.zhanghai.android.douya.R;
-import me.zhanghai.android.douya.util.TimeUtils;
+import me.zhanghai.android.douya.util.DoubanUtils;
 
 public class Broadcast implements Parcelable {
 
     @SerializedName("activity")
     public String action;
 
-    public Attachment attachment;
+    public BroadcastAttachment attachment;
 
-    public User author;
+    public SimpleUser author;
 
     @SerializedName("can_reply")
     public int canCommentInt;
@@ -33,9 +33,9 @@ public class Broadcast implements Parcelable {
     public int commentCount;
 
     @SerializedName("created_at")
-    public String createdAt;
+    public String createTime;
 
-    public ArrayList<Entity> entities = new ArrayList<>();
+    public ArrayList<TextEntity> entities = new ArrayList<>();
 
     public long id;
 
@@ -76,8 +76,8 @@ public class Broadcast implements Parcelable {
 
     public String type;
 
-    public boolean isAuthorOneself(Context context) {
-        return author != null && author.isOneself(context);
+    public boolean isAuthorOneself() {
+        return author != null && author.isOneself();
     }
 
     public String getAuthorName() {
@@ -85,7 +85,7 @@ public class Broadcast implements Parcelable {
     }
 
     public CharSequence getTextWithEntities(Context context) {
-        return Entity.applyEntities(text, entities, context);
+        return TextEntity.applyEntities(text, entities);
     }
 
     public void fixLiked(boolean liked) {
@@ -126,15 +126,6 @@ public class Broadcast implements Parcelable {
                 : null;
     }
 
-    /**
-     * Use {@link me.zhanghai.android.douya.ui.TimeActionTextView} instead if the text is to be set
-     * on a {@code TextView}.
-     */
-    public String getActionWithTime(Context context) {
-        return context.getString(R.string.broadcast_time_action_format,
-                TimeUtils.formatDoubanDateTime(createdAt, context), action);
-    }
-
     public String getLikeCountString() {
         return likeCount == 0 ? null : String.valueOf(likeCount);
     }
@@ -148,12 +139,9 @@ public class Broadcast implements Parcelable {
     }
 
     public String getClipboardText(Context context) {
-        StringBuilder builder = new StringBuilder()
-                .append(getAuthorName())
-                .append(' ')
-                .append(getActionWithTime(context));
+        StringBuilder builder = new StringBuilder();
         if (attachment != null) {
-            builder.append('\n')
+            builder
                     .append(attachment.title)
                     .append('\n')
                     .append(attachment.href)
@@ -161,9 +149,10 @@ public class Broadcast implements Parcelable {
                     .append(attachment.description);
         }
         if (!TextUtils.isEmpty(text)) {
-            builder
-                    .append('\n')
-                    .append(getTextWithEntities(context));
+            if (builder.length() > 0) {
+                builder.append('\n');
+            }
+            builder.append(getTextWithEntities(context));
         }
         return builder.toString();
     }
@@ -175,6 +164,31 @@ public class Broadcast implements Parcelable {
     public String makeTransitionName() {
         return makeTransitionName(id);
     }
+
+
+    public me.zhanghai.android.douya.network.api.info.frodo.Broadcast toFrodo() {
+        me.zhanghai.android.douya.network.api.info.frodo.Broadcast broadcast =
+                new me.zhanghai.android.douya.network.api.info.frodo.Broadcast();
+        broadcast.action = action;
+        broadcast.author = author.toFrodo();
+        broadcast.attachment = attachment.toFrodo(photos);
+        broadcast.commentCount = commentCount;
+        broadcast.createTime = createTime;
+        broadcast.entities = TextEntity.toFrodo(entities);
+        broadcast.isRebroadcastAndCommentForbidden = canComment();
+        broadcast.id = id;
+        for (Image image : images) {
+            broadcast.images.add(image.toFrodoSizedImage());
+        }
+        broadcast.likeCount = likeCount;
+        broadcast.isLiked = isLiked;
+        broadcast.rebroadcastCount = rebroadcastCount;
+        broadcast.shareUrl = "https://www.douban.com/doubanapp/dispatch?uri=/status/" + id + "/";
+        broadcast.text = text;
+        broadcast.uri = DoubanUtils.makeBroadcastUri(id);
+        return broadcast;
+    }
+
 
     public static final Parcelable.Creator<Broadcast> CREATOR =
             new Parcelable.Creator<Broadcast>() {
@@ -190,12 +204,12 @@ public class Broadcast implements Parcelable {
 
     protected Broadcast(Parcel in) {
         action = in.readString();
-        attachment = in.readParcelable(Attachment.class.getClassLoader());
-        author = in.readParcelable(User.class.getClassLoader());
+        attachment = in.readParcelable(BroadcastAttachment.class.getClassLoader());
+        author = in.readParcelable(SimpleUser.class.getClassLoader());
         canCommentInt = in.readInt();
         commentCount = in.readInt();
-        createdAt = in.readString();
-        entities = in.createTypedArrayList(Entity.CREATOR);
+        createTime = in.readString();
+        entities = in.createTypedArrayList(TextEntity.CREATOR);
         id = in.readLong();
         interestType = in.readString();
         isInterest = in.readByte() != 0;
@@ -225,7 +239,7 @@ public class Broadcast implements Parcelable {
         dest.writeParcelable(author, 0);
         dest.writeInt(canCommentInt);
         dest.writeInt(commentCount);
-        dest.writeString(createdAt);
+        dest.writeString(createTime);
         dest.writeTypedList(entities);
         dest.writeLong(id);
         dest.writeString(interestType);

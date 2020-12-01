@@ -12,8 +12,8 @@ import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
-import android.support.v4.view.animation.FastOutLinearInInterpolator;
-import android.support.v4.view.animation.LinearOutSlowInInterpolator;
+import androidx.interpolator.view.animation.FastOutLinearInInterpolator;
+import androidx.interpolator.view.animation.LinearOutSlowInInterpolator;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.ViewGroup;
@@ -82,10 +82,7 @@ public class ProfileLayout extends FlexibleSpaceLayout {
         Context context = getContext();
         mUseWideLayout = ProfileUtils.shouldUseWideLayout(context);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            setSystemUiVisibility(SYSTEM_UI_FLAG_LAYOUT_STABLE | SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
-        }
-
+        ViewUtils.setLayoutFullscreen(this);
         mWindowBackground = new ColorDrawable(mBackgroundColor);
         AppUtils.getActivityFromContext(context).getWindow()
                 .setBackgroundDrawable(mWindowBackground);

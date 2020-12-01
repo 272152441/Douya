@@ -20,8 +20,8 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import me.zhanghai.android.douya.R;
 import me.zhanghai.android.douya.link.UriHandler;
-import me.zhanghai.android.douya.network.api.info.apiv2.UserInfo;
-import me.zhanghai.android.douya.network.api.info.frodo.Review;
+import me.zhanghai.android.douya.network.api.info.apiv2.User;
+import me.zhanghai.android.douya.network.api.info.frodo.SimpleReview;
 import me.zhanghai.android.douya.ui.FriendlyCardView;
 import me.zhanghai.android.douya.util.ImageUtils;
 import me.zhanghai.android.douya.util.StringUtils;
@@ -59,11 +59,11 @@ public class ProfileReviewsLayout extends FriendlyCardView {
     }
 
     private void init() {
-        inflate(getContext(), R.layout.profile_reviews_layout, this);
+        ViewUtils.inflateInto(R.layout.profile_reviews_layout, this);
         ButterKnife.bind(this);
     }
 
-    public void bind(final UserInfo userInfo, List<Review> reviewList) {
+    public void bind(final User user, List<SimpleReview> reviewList) {
 
         final Context context = getContext();
         OnClickListener viewMoreListener = new OnClickListener() {
@@ -71,15 +71,15 @@ public class ProfileReviewsLayout extends FriendlyCardView {
             public void onClick(View view) {
                 // TODO
                 UriHandler.open(StringUtils.formatUs("https://www.douban.com/people/%s/reviews",
-                        userInfo.getIdOrUid()), context);
-                //context.startActivity(ReviewListActivity.makeIntent(userInfo, context));
+                        user.getIdOrUid()), context);
+                //context.startActivity(ReviewListActivity.makeIntent(mUser, context));
             }
         };
         mTitleText.setOnClickListener(viewMoreListener);
         mViewMoreText.setOnClickListener(viewMoreListener);
 
         int i = 0;
-        for (final Review review : reviewList) {
+        for (final SimpleReview review : reviewList) {
 
             if (i >= REVIEW_COUNT_MAX) {
                 break;
@@ -97,13 +97,13 @@ public class ProfileReviewsLayout extends FriendlyCardView {
                 ViewUtils.setTextViewLinkClickable(holder.titleText);
             }
 
-            String coverUrl = review.cover;
+            String coverUrl = review.coverUrl;
             if (TextUtils.isEmpty(coverUrl) && review.item != null && review.item.cover != null) {
-                coverUrl = review.item.cover.getNormal();
+                coverUrl = review.item.cover.getMediumUrl();
             }
             if (!TextUtils.isEmpty(coverUrl)) {
                 holder.coverImage.setVisibility(VISIBLE);
-                ImageUtils.loadImage(holder.coverImage, coverUrl, context);
+                ImageUtils.loadImage(holder.coverImage, coverUrl);
             } else {
                 holder.coverImage.setVisibility(GONE);
             }
@@ -125,10 +125,10 @@ public class ProfileReviewsLayout extends FriendlyCardView {
         ViewUtils.setVisibleOrGone(mReviewList, i != 0);
         ViewUtils.setVisibleOrGone(mEmptyView, i == 0);
 
-        // HACK: We don't have userInfo.reviewCount, but normally we request more than
+        // HACK: We don't have mUser.reviewCount, but normally we request more than
         // REVIEW_COUNT_MAX.
         // FIXME: Fix this hack?
-        //if (userInfo.reviewCount > i) {
+        //if (mUser.reviewCount > i) {
         if (reviewList.size() > i) {
             mViewMoreText.setText(R.string.view_more);
         } else {

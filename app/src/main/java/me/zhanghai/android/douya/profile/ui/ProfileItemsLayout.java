@@ -6,8 +6,8 @@
 package me.zhanghai.android.douya.profile.ui;
 
 import android.content.Context;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.TextView;
@@ -17,9 +17,9 @@ import java.util.List;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import me.zhanghai.android.douya.R;
-import me.zhanghai.android.douya.network.api.info.apiv2.UserInfo;
-import me.zhanghai.android.douya.network.api.info.frodo.CollectedItem;
-import me.zhanghai.android.douya.network.api.info.frodo.Item;
+import me.zhanghai.android.douya.network.api.info.apiv2.User;
+import me.zhanghai.android.douya.network.api.info.frodo.CollectableItem;
+import me.zhanghai.android.douya.network.api.info.frodo.ItemCollectionState;
 import me.zhanghai.android.douya.network.api.info.frodo.UserItems;
 import me.zhanghai.android.douya.ui.FriendlyCardView;
 import me.zhanghai.android.douya.util.ViewUtils;
@@ -63,7 +63,7 @@ public abstract class ProfileItemsLayout extends FriendlyCardView {
 
     private void init() {
 
-        inflate(getContext(), R.layout.profile_items_layout, this);
+        ViewUtils.inflateInto(R.layout.profile_items_layout, this);
         ButterKnife.bind(this);
 
         mItemList.setHasFixedSize(true);
@@ -76,8 +76,8 @@ public abstract class ProfileItemsLayout extends FriendlyCardView {
     protected void bind(UserItems primaryItems, UserItems secondaryItems, UserItems tertiaryItems) {
 
         final Context context = getContext();
-        CollectedItem.State state = primaryItems.getState();
-        Item.Type type = primaryItems.getType();
+        ItemCollectionState state = primaryItems.getState();
+        CollectableItem.Type type = primaryItems.getType();
         String stateString = state.getString(type, context);
         mTitleText.setText(stateString);
         OnClickListener viewMoreListener = new OnClickListener() {
@@ -131,14 +131,14 @@ public abstract class ProfileItemsLayout extends FriendlyCardView {
         }
     }
 
-    public void bind(UserInfo userInfo, List<UserItems> userItemList) {
+    public void bind(User user, List<UserItems> userItemList) {
 
-        mUserIdOrUid = userInfo.getIdOrUid();
+        mUserIdOrUid = user.getIdOrUid();
 
         UserItems primaryItems = null;
         UserItems secondaryItems = null;
         UserItems tertiaryItems = null;
-        Item.Type type = getItemType();
+        CollectableItem.Type type = getItemType();
         for (UserItems userItems : userItemList) {
             if (userItems.getType() == type) {
                 switch (userItems.getState()) {
@@ -160,7 +160,7 @@ public abstract class ProfileItemsLayout extends FriendlyCardView {
             //noinspection deprecation
             primaryItems.type = type.getApiString();
             //noinspection deprecation
-            primaryItems.state = CollectedItem.State.DONE.getApiString();
+            primaryItems.state = ItemCollectionState.DONE.getApiString();
         }
         bind(primaryItems, secondaryItems, tertiaryItems);
     }
@@ -169,7 +169,7 @@ public abstract class ProfileItemsLayout extends FriendlyCardView {
         return mUserIdOrUid;
     }
 
-    protected abstract Item.Type getItemType();
+    protected abstract CollectableItem.Type getItemType();
 
     protected abstract void onViewPrimaryItems();
 

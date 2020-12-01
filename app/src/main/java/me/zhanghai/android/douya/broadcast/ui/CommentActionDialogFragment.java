@@ -8,13 +8,13 @@ package me.zhanghai.android.douya.broadcast.ui;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.v4.app.Fragment;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatDialogFragment;
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatDialogFragment;
 
 import me.zhanghai.android.douya.R;
-import me.zhanghai.android.douya.network.api.info.apiv2.Comment;
+import me.zhanghai.android.douya.network.api.info.frodo.Comment;
 import me.zhanghai.android.douya.util.FragmentUtils;
 
 /**
@@ -24,9 +24,9 @@ public class CommentActionDialogFragment extends AppCompatDialogFragment {
 
     private static final String KEY_PREFIX = CommentActionDialogFragment.class.getName() + '.';
 
-    public static final String EXTRA_COMMENT = KEY_PREFIX + "comment";
-    public static final String EXTRA_CAN_REPLY_TO = KEY_PREFIX + "can_reply_to";
-    public static final String EXTRA_CAN_DELETE = KEY_PREFIX + "can_delete";
+    private static final String EXTRA_COMMENT = KEY_PREFIX + "comment";
+    private static final String EXTRA_CAN_REPLY_TO = KEY_PREFIX + "can_reply_to";
+    private static final String EXTRA_CAN_DELETE = KEY_PREFIX + "can_delete";
 
     private Comment mComment;
     private boolean mCanReplyTo;
@@ -41,10 +41,10 @@ public class CommentActionDialogFragment extends AppCompatDialogFragment {
                                                           boolean canDelete) {
         //noinspection deprecation
         CommentActionDialogFragment fragment = new CommentActionDialogFragment();
-        Bundle arguments = FragmentUtils.ensureArguments(fragment);
-        arguments.putParcelable(EXTRA_COMMENT, comment);
-        arguments.putBoolean(EXTRA_CAN_REPLY_TO, canReplyTo);
-        arguments.putBoolean(EXTRA_CAN_DELETE, canDelete);
+        FragmentUtils.getArgumentsBuilder(fragment)
+                .putParcelable(EXTRA_COMMENT, comment)
+                .putBoolean(EXTRA_CAN_REPLY_TO, canReplyTo)
+                .putBoolean(EXTRA_CAN_DELETE, canDelete);
         return fragment;
     }
 
@@ -65,7 +65,7 @@ public class CommentActionDialogFragment extends AppCompatDialogFragment {
         CharSequence[] items;
         DialogInterface.OnClickListener onClickListener;
         if (mCanReplyTo && mCanDelete) {
-            items = new CharSequence[]{
+            items = new CharSequence[] {
                     getString(R.string.broadcast_comment_action_reply_to),
                     getString(R.string.broadcast_comment_action_copy_text),
                     getString(R.string.broadcast_comment_action_delete)
@@ -87,7 +87,7 @@ public class CommentActionDialogFragment extends AppCompatDialogFragment {
                 }
             };
         } else if (mCanReplyTo) {
-            items = new CharSequence[]{
+            items = new CharSequence[] {
                     getString(R.string.broadcast_comment_action_reply_to),
                     getString(R.string.broadcast_comment_action_copy_text)
             };
@@ -105,7 +105,7 @@ public class CommentActionDialogFragment extends AppCompatDialogFragment {
                 }
             };
         } else if (mCanDelete) {
-            items = new CharSequence[]{
+            items = new CharSequence[] {
                     getString(R.string.broadcast_comment_action_copy_text),
                     getString(R.string.broadcast_comment_action_delete)
             };
@@ -123,7 +123,7 @@ public class CommentActionDialogFragment extends AppCompatDialogFragment {
                 }
             };
         } else {
-            items = new CharSequence[]{
+            items = new CharSequence[] {
                     getString(R.string.broadcast_comment_action_copy_text),
             };
             onClickListener = new DialogInterface.OnClickListener() {

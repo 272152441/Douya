@@ -8,11 +8,10 @@ package me.zhanghai.android.douya.profile.ui;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatDialogFragment;
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatDialogFragment;
 
 import me.zhanghai.android.douya.R;
 
@@ -36,7 +35,7 @@ public class ConfirmUnfollowUserDialogFragment extends AppCompatDialogFragment {
                 .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        getListener().unfollowUser();
+                        getListener().onUnfollowUser();
                     }
                 })
                 .setNegativeButton(R.string.cancel, null)
@@ -53,6 +52,6 @@ public class ConfirmUnfollowUserDialogFragment extends AppCompatDialogFragment {
     }
 
     public interface Listener {
-        void unfollowUser();
+        void onUnfollowUser();
     }
 }

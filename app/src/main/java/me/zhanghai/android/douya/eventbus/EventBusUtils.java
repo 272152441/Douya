@@ -7,11 +7,14 @@ package me.zhanghai.android.douya.eventbus;
 
 import android.os.Handler;
 
-import de.greenrobot.event.EventBus;
+import org.greenrobot.eventbus.EventBus;
 
 public class EventBusUtils {
 
-    private static final EventBus sEventBus = EventBus.getDefault();
+    private static final EventBus sEventBus = EventBus.builder()
+            .strictMethodVerification(true)
+            .throwSubscriberException(true)
+            .build();
 
     private EventBusUtils() {}
 
@@ -27,12 +30,11 @@ public class EventBusUtils {
         sEventBus.post(event);
     }
 
-    public static void postAsync(final Object event) {
-        new Handler().post(new Runnable() {
-            @Override
-            public void run() {
-                sEventBus.post(event);
-            }
-        });
+    public static void postAsync(Object event) {
+        new Handler().post(() -> sEventBus.post(event));
+    }
+
+    public static void cancel(Object event) {
+        sEventBus.cancelEventDelivery(event);
     }
 }

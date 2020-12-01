@@ -5,15 +5,23 @@
 
 package me.zhanghai.android.douya.util;
 
+import android.os.ParcelFileDescriptor;
+import androidx.annotation.NonNull;
 import android.util.Base64;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.io.Closeable;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.nio.charset.Charset;
 import java.util.Collection;
 
 public class IoUtils {
@@ -36,10 +44,43 @@ public class IoUtils {
         }
     }
 
-    public static String inputStreamToString(InputStream inputStream, String charsetName)
+    // ParcelFileDescriptor did not implement Closable before API level 16.
+    public static void close(ParcelFileDescriptor parcelFileDescriptor) {
+        try {
+            parcelFileDescriptor.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static String fileToString(File file, Charset charset) throws IOException {
+        try (InputStream inputStream = new FileInputStream(file)) {
+            return inputStreamToString(inputStream, charset);
+        }
+    }
+
+    public static long inputStreamToOutputStream(@NonNull InputStream inputStream,
+                                                 @NonNull OutputStream outputStream)
             throws IOException {
+        long count = 0;
+        byte[] buffer = new byte[BUFFER_SIZE];
+        int length;
+        while ((length = inputStream.read(buffer)) != -1) {
+            outputStream.write(buffer, 0, length);
+            count += length;
+        }
+        return count;
+    }
+
+    @NonNull
+    public static String inputStreamToString(@NonNull InputStream inputStream,
+                                             @NonNull Charset charset) throws IOException {
+        return readerToString(new InputStreamReader(inputStream, charset));
+    }
+
+    @NonNull
+    public static String readerToString(@NonNull Reader reader) throws IOException {
         StringBuilder builder = new StringBuilder();
-        InputStreamReader reader = new InputStreamReader(inputStream, charsetName);
         char[] buffer = new char[BUFFER_SIZE];
         int length;
         while ((length = reader.read(buffer)) != -1) {
@@ -48,12 +89,25 @@ public class IoUtils {
         return builder.toString();
     }
 
-    public static String byteArrayToBase64(byte[] byteArray) {
-        // We are using Base64 in Json so we don't want newlines here.
-        return Base64.encodeToString(byteArray, Base64.NO_WRAP);
+    public static void stringToFile(String string, File file, Charset charset) throws IOException {
+        try (OutputStream outputStream = new FileOutputStream(file)) {
+            stringToOutputStream(string, outputStream, charset);
+        }
     }
 
-    public static byte[] base64ToByteArray(String base64) {
+    public static void stringToOutputStream(String string, OutputStream outputStream,
+                                            Charset charset) throws IOException {
+        outputStream.write(string.getBytes(charset));
+    }
+
+    @NonNull
+    public static String byteArrayToBase64(@NonNull byte[] bytes) {
+        // We are using Base64 in Json so we don't want newlines here.
+        return Base64.encodeToString(bytes, Base64.NO_WRAP);
+    }
+
+    @NonNull
+    public static byte[] base64ToByteArray(@NonNull String base64) {
         return Base64.decode(base64, Base64.DEFAULT);
     }
 

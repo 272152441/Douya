@@ -5,22 +5,24 @@
 
 package me.zhanghai.android.douya.ui;
 
-import android.support.v7.widget.RecyclerView;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+import android.util.SparseIntArray;
 import android.view.ViewGroup;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import me.zhanghai.android.douya.util.LogUtils;
 
 public class MergeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private RecyclerView.Adapter[] mAdapters;
+    @NonNull
+    private final RecyclerView.Adapter[] mAdapters;
 
-    private Map<Integer, Integer> mItemViewTypeToAdapterIndexMap = new HashMap<>();
+    @NonNull
+    private final SparseIntArray mItemViewTypeToAdapterIndexMap = new SparseIntArray();
 
-    public MergeAdapter(RecyclerView.Adapter... adapters) {
+    public MergeAdapter(@NonNull RecyclerView.Adapter... adapters) {
 
         mAdapters = adapters;
 
@@ -38,6 +40,7 @@ public class MergeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         super.setHasStableIds(hasStableIds);
     }
 
+    @NonNull
     public RecyclerView.Adapter[] getAdapters() {
         return mAdapters;
     }
@@ -63,10 +66,9 @@ public class MergeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             int count = adapter.getItemCount();
             if (position < count) {
                 return 31 * adapterIndex + adapter.getItemId(position);
-            } else {
-                position -= count;
-                ++adapterIndex;
             }
+            position -= count;
+            ++adapterIndex;
         }
         throw new IllegalStateException("Unknown position: " + position);
     }
@@ -80,84 +82,72 @@ public class MergeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 int itemViewType = (adapterIndex << 16) + adapter.getItemViewType(position);
                 mItemViewTypeToAdapterIndexMap.put(itemViewType, adapterIndex);
                 return itemViewType;
-            } else {
-                position -= count;
-                ++adapterIndex;
             }
+            position -= count;
+            ++adapterIndex;
         }
         throw new IllegalStateException("Unknown position: " + position);
     }
 
+    @NonNull
     @Override
-    public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        Integer adapterIndex = mItemViewTypeToAdapterIndexMap.get(viewType);
-        if (adapterIndex != null) {
-            return mAdapters[adapterIndex].onCreateViewHolder(parent,
-                    viewType - (adapterIndex << 16));
-        }
-        throw new IllegalStateException("Unknown viewType: " + viewType);
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        int adapterIndex = getAdapterIndexForViewType(viewType);
+        return mAdapters[adapterIndex].onCreateViewHolder(parent, viewType - (adapterIndex << 16));
     }
 
     @Override
-    public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         for (RecyclerView.Adapter adapter : mAdapters) {
             int count = adapter.getItemCount();
             if (position < count) {
                 //noinspection unchecked
                 adapter.onBindViewHolder(holder, position);
                 return;
-            } else {
-                position -= count;
             }
+            position -= count;
         }
         throw new IllegalStateException("Unknown position: " + position);
     }
 
     @Override
-    public void onBindViewHolder(RecyclerView.ViewHolder holder, int position,
-                                 List<Object> payloads) {
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position,
+                                 @NonNull List<Object> payloads) {
         for (RecyclerView.Adapter adapter : mAdapters) {
             int count = adapter.getItemCount();
             if (position < count) {
                 //noinspection unchecked
                 adapter.onBindViewHolder(holder, position, payloads);
                 return;
-            } else {
-                position -= count;
             }
+            position -= count;
         }
         throw new IllegalStateException("Unknown position: " + position);
     }
 
     @Override
-    public void onViewRecycled(RecyclerView.ViewHolder holder) {
-        int viewType = holder.getItemViewType();
-        Integer adapterIndex = mItemViewTypeToAdapterIndexMap.get(viewType);
-        if (adapterIndex != null) {
-            //noinspection unchecked
-            mAdapters[adapterIndex].onViewRecycled(holder);
-            return;
-        }
-        throw new IllegalStateException("Unknown viewType: " + viewType);
+    public void onViewRecycled(@NonNull RecyclerView.ViewHolder holder) {
+        int adapterIndex = getAdapterIndexForViewType(holder.getItemViewType());
+        //noinspection unchecked
+        mAdapters[adapterIndex].onViewRecycled(holder);
     }
 
     @Override
-    public boolean onFailedToRecycleView(RecyclerView.ViewHolder holder) {
+    public boolean onFailedToRecycleView(@NonNull RecyclerView.ViewHolder holder) {
         int position = holder.getAdapterPosition();
         for (RecyclerView.Adapter adapter : mAdapters) {
             int count = adapter.getItemCount();
             if (position < count) {
                 //noinspection unchecked
                 return adapter.onFailedToRecycleView(holder);
-            } else {
-                position -= count;
             }
+            position -= count;
         }
         throw new IllegalStateException("Unknown position: " + position);
     }
 
     @Override
-    public void onViewAttachedToWindow(RecyclerView.ViewHolder holder) {
+    public void onViewAttachedToWindow(@NonNull RecyclerView.ViewHolder holder) {
         int position = holder.getAdapterPosition();
         for (RecyclerView.Adapter adapter : mAdapters) {
             int count = adapter.getItemCount();
@@ -165,15 +155,14 @@ public class MergeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 //noinspection unchecked
                 adapter.onViewAttachedToWindow(holder);
                 return;
-            } else {
-                position -= count;
             }
+            position -= count;
         }
         throw new IllegalStateException("Unknown position: " + position);
     }
 
     @Override
-    public void onViewDetachedFromWindow(RecyclerView.ViewHolder holder) {
+    public void onViewDetachedFromWindow(@NonNull RecyclerView.ViewHolder holder) {
         int position = holder.getAdapterPosition();
         for (RecyclerView.Adapter adapter : mAdapters) {
             int count = adapter.getItemCount();
@@ -181,32 +170,39 @@ public class MergeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 //noinspection unchecked
                 adapter.onViewDetachedFromWindow(holder);
                 return;
-            } else {
-                position -= count;
             }
+            position -= count;
         }
         throw new IllegalStateException("Unknown position: " + position);
     }
 
     @Override
-    public void onAttachedToRecyclerView(RecyclerView recyclerView) {
+    public void onAttachedToRecyclerView(@NonNull RecyclerView recyclerView) {
         for (RecyclerView.Adapter adapter : mAdapters) {
             adapter.onAttachedToRecyclerView(recyclerView);
         }
     }
 
     @Override
-    public void onDetachedFromRecyclerView(RecyclerView recyclerView) {
+    public void onDetachedFromRecyclerView(@NonNull RecyclerView recyclerView) {
         for (RecyclerView.Adapter adapter : mAdapters) {
             adapter.onDetachedFromRecyclerView(recyclerView);
         }
     }
 
+    private int getAdapterIndexForViewType(int viewType) {
+        int mapIndex = mItemViewTypeToAdapterIndexMap.indexOfKey(viewType);
+        if (mapIndex < 0) {
+            throw new IllegalStateException("Unknown viewType: " + viewType);
+        }
+        return mItemViewTypeToAdapterIndexMap.valueAt(mapIndex);
+    }
+
     private class AdapterDataObserver extends RecyclerView.AdapterDataObserver {
 
-        private RecyclerView.Adapter mAdapter;
+        private final RecyclerView.Adapter mAdapter;
 
-        public AdapterDataObserver(RecyclerView.Adapter adapter) {
+        public AdapterDataObserver(@NonNull RecyclerView.Adapter adapter) {
             mAdapter = adapter;
         }
 

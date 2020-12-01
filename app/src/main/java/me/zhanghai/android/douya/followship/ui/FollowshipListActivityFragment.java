@@ -6,10 +6,10 @@
 package me.zhanghai.android.douya.followship.ui;
 
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -32,9 +32,10 @@ public abstract class FollowshipListActivityFragment extends Fragment {
 
     private String mUserIdOrUid;
 
-    protected void setArguments(String userIdOrUid) {
-        FragmentUtils.ensureArguments(this)
+    protected FollowshipListActivityFragment setArguments(String userIdOrUid) {
+        FragmentUtils.getArgumentsBuilder(this)
                 .putString(EXTRA_USER_ID_OR_UID, userIdOrUid);
+        return this;
     }
 
     @Override
@@ -91,5 +92,5 @@ public abstract class FollowshipListActivityFragment extends Fragment {
         return mUserIdOrUid;
     }
 
-    abstract protected FollowshipListFragment onCreateListFragment();
+    abstract protected FollowshipUserListFragment onCreateListFragment();
 }

@@ -10,12 +10,16 @@ import android.content.Context;
 import org.threeten.bp.Duration;
 import org.threeten.bp.LocalDate;
 import org.threeten.bp.LocalDateTime;
+import org.threeten.bp.YearMonth;
 import org.threeten.bp.ZoneId;
 import org.threeten.bp.ZonedDateTime;
 import org.threeten.bp.chrono.IsoChronology;
 import org.threeten.bp.format.DateTimeFormatter;
 import org.threeten.bp.format.DateTimeFormatterBuilder;
 import org.threeten.bp.format.DateTimeParseException;
+import org.threeten.bp.format.ResolverStyle;
+import org.threeten.bp.format.SignStyle;
+import org.threeten.bp.temporal.ChronoField;
 
 import me.zhanghai.android.douya.R;
 
@@ -25,15 +29,36 @@ public class TimeUtils {
     private static final int MINUTES_PER_HOUR = 60;
     private static final int SECONDS_PER_HOUR = SECONDS_PER_MINUTE * MINUTES_PER_HOUR;
 
+    private static final DateTimeFormatter DOUBAN_YEAR_MONTH_FORMATTER =
+            new DateTimeFormatterBuilder()
+                    .appendValue(ChronoField.YEAR, 4, 10, SignStyle.EXCEEDS_PAD)
+                    .appendLiteral('-')
+                    .appendValue(ChronoField.MONTH_OF_YEAR, 1, 2, SignStyle.NOT_NEGATIVE)
+                    .toFormatter()
+                    .withResolverStyle(ResolverStyle.STRICT)
+                    .withChronology(IsoChronology.INSTANCE);
+
+    private static final DateTimeFormatter DOUBAN_DATE_FORMATTER =
+            new DateTimeFormatterBuilder()
+                    .appendValue(ChronoField.YEAR, 4, 10, SignStyle.EXCEEDS_PAD)
+                    .appendLiteral('-')
+                    .appendValue(ChronoField.MONTH_OF_YEAR, 1, 2, SignStyle.NOT_NEGATIVE)
+                    .appendLiteral('-')
+                    .appendValue(ChronoField.DAY_OF_MONTH, 1, 2, SignStyle.NOT_NEGATIVE)
+                    .toFormatter()
+                    .withResolverStyle(ResolverStyle.STRICT)
+                    .withChronology(IsoChronology.INSTANCE);
+
     private static final DateTimeFormatter DOUBAN_DATE_TIME_FORMATTER =
             new DateTimeFormatterBuilder()
                     .append(DateTimeFormatter.ISO_LOCAL_DATE)
                     .appendLiteral(' ')
                     .append(DateTimeFormatter.ISO_LOCAL_TIME)
                     .toFormatter()
+                    .withResolverStyle(ResolverStyle.STRICT)
                     .withChronology(IsoChronology.INSTANCE);
 
-    private static final ZoneId DOUBAN_ZONED_ID = ZoneId.of("Asia/Shanghai");
+    private static final ZoneId DOUBAN_ZONE_ID = ZoneId.of("Asia/Shanghai");
 
     private static final Duration JUST_NOW_DURATION = Duration.ofMinutes(1);
     private static final Duration MINUTE_PATTERN_DURATION = Duration.ofHours(1);
@@ -42,9 +67,24 @@ public class TimeUtils {
     /**
      * @throws DateTimeParseException
      */
+    public static YearMonth parseDoubanYearMonth(String doubanDate) {
+        return YearMonth.parse(doubanDate, DOUBAN_YEAR_MONTH_FORMATTER);
+    }
+
+    /**
+     * @throws DateTimeParseException
+     */
+    public static LocalDate parseDoubanDate(String doubanDate) {
+        return LocalDate.parse(doubanDate, DOUBAN_DATE_FORMATTER);
+    }
+
+    /**
+     * @throws DateTimeParseException
+     */
     public static ZonedDateTime parseDoubanDateTime(String doubanDateTime) {
         return ZonedDateTime.of(LocalDateTime.parse(doubanDateTime, DOUBAN_DATE_TIME_FORMATTER),
-                DOUBAN_ZONED_ID);
+                DOUBAN_ZONE_ID)
+                .withZoneSameInstant(ZoneId.systemDefault());
     }
 
     public static String formatDateTime(ZonedDateTime dateTime, Context context) {
@@ -118,5 +158,20 @@ public class TimeUtils {
 
     public static String formatDate(ZonedDateTime dateTime, Context context) {
         return formatDate(dateTime.toLocalDate(), dateTime.getZone(), context);
+    }
+
+    public static String formatDuration(long seconds, Context context) {
+        Duration duration = Duration.ofSeconds(seconds);
+        long hours = duration.toHours();
+        duration = duration.minusHours(hours);
+        long minutes = duration.toMinutes();
+        duration = duration.minusMinutes(minutes);
+        seconds = duration.getSeconds();
+        if (hours > 0) {
+            return context.getString(R.string.duration_hour_minute_second_format, hours, minutes,
+                    seconds);
+        } else {
+            return context.getString(R.string.duration_minute_second_format, minutes, seconds);
+        }
     }
 }

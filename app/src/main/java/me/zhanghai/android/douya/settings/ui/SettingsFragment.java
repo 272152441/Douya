@@ -5,23 +5,48 @@
 
 package me.zhanghai.android.douya.settings.ui;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.support.v7.preference.Preference;
-import android.support.v7.preference.PreferenceFragmentCompat;
+import android.text.TextUtils;
 
+import com.takisoft.preferencex.PreferenceFragmentCompat;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import me.zhanghai.android.douya.R;
+import me.zhanghai.android.douya.settings.info.Settings;
+import me.zhanghai.android.douya.util.NightModeHelper;
+import me.zhanghai.android.douya.util.SharedPrefsUtils;
 
-public class SettingsFragment extends PreferenceFragmentCompat {
+public class SettingsFragment extends PreferenceFragmentCompat
+        implements SharedPreferences.OnSharedPreferenceChangeListener {
 
     @Override
-    public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+    public void onCreatePreferencesFix(@Nullable Bundle savedInstanceState,
+                                       @Nullable String rootKey) {
         addPreferencesFromResource(R.xml.settings);
     }
 
     @Override
-    public void onDisplayPreferenceDialog(Preference preference) {
-        if (!LicensesDialogPreference.onDisplayPreferenceDialog(this, preference)) {
-            super.onDisplayPreferenceDialog(preference);
+    public void onStart() {
+        super.onStart();
+
+        SharedPrefsUtils.getSharedPrefs().registerOnSharedPreferenceChangeListener(this);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        SharedPrefsUtils.getSharedPrefs().unregisterOnSharedPreferenceChangeListener(this);
+    }
+
+    @Override
+    public void onSharedPreferenceChanged(@NonNull SharedPreferences sharedPreferences,
+                                          @NonNull String key) {
+        if (!TextUtils.equals(key, Settings.NIGHT_MODE.getKey())) {
+            return;
         }
+        NightModeHelper.updateNightMode(requireActivity());
     }
 }

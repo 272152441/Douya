@@ -6,64 +6,65 @@
 package me.zhanghai.android.douya.broadcast.content;
 
 import android.content.Context;
-import android.support.annotation.Keep;
 
-import com.android.volley.VolleyError;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import me.zhanghai.android.douya.R;
-import me.zhanghai.android.douya.content.ResourceWriter;
+import me.zhanghai.android.douya.content.RequestResourceWriter;
 import me.zhanghai.android.douya.content.ResourceWriterManager;
-import me.zhanghai.android.douya.eventbus.BroadcastDeletedEvent;
+import me.zhanghai.android.douya.eventbus.BroadcastRebroadcastErrorEvent;
+import me.zhanghai.android.douya.eventbus.BroadcastRebroadcastedEvent;
 import me.zhanghai.android.douya.eventbus.BroadcastUpdatedEvent;
 import me.zhanghai.android.douya.eventbus.BroadcastWriteFinishedEvent;
 import me.zhanghai.android.douya.eventbus.BroadcastWriteStartedEvent;
 import me.zhanghai.android.douya.eventbus.EventBusUtils;
-import me.zhanghai.android.douya.network.Request;
-import me.zhanghai.android.douya.network.api.ApiContract.Response.Error.Codes;
 import me.zhanghai.android.douya.network.api.ApiError;
-import me.zhanghai.android.douya.network.api.ApiRequests;
-import me.zhanghai.android.douya.network.api.info.apiv2.Broadcast;
+import me.zhanghai.android.douya.network.api.ApiRequest;
+import me.zhanghai.android.douya.network.api.ApiService;
+import me.zhanghai.android.douya.network.api.info.frodo.Broadcast;
 import me.zhanghai.android.douya.util.LogUtils;
 import me.zhanghai.android.douya.util.ToastUtils;
 
-class RebroadcastBroadcastWriter extends ResourceWriter<RebroadcastBroadcastWriter, Broadcast> {
+class RebroadcastBroadcastWriter
+        extends RequestResourceWriter<RebroadcastBroadcastWriter, Broadcast> {
 
     private long mBroadcastId;
     private Broadcast mBroadcast;
-    private boolean mRebroadcast;
+    private String mText;
 
-    private RebroadcastBroadcastWriter(long broadcastId, Broadcast broadcast, boolean rebroadcast,
+    private RebroadcastBroadcastWriter(long broadcastId, Broadcast broadcast, String text,
                                        ResourceWriterManager<RebroadcastBroadcastWriter> manager) {
         super(manager);
 
         mBroadcastId = broadcastId;
         mBroadcast = broadcast;
-        mRebroadcast = rebroadcast;
+        mText = text;
 
         EventBusUtils.register(this);
     }
 
-    RebroadcastBroadcastWriter(long broadcastId, boolean rebroadcast,
+    RebroadcastBroadcastWriter(long broadcastId, String text,
                                ResourceWriterManager<RebroadcastBroadcastWriter> manager) {
-        this(broadcastId, null, rebroadcast, manager);
+        this(broadcastId, null, text, manager);
     }
 
-    RebroadcastBroadcastWriter(Broadcast broadcast, boolean rebroadcast,
+    RebroadcastBroadcastWriter(Broadcast broadcast, String text,
                                ResourceWriterManager<RebroadcastBroadcastWriter> manager) {
-        this(broadcast.id, broadcast, rebroadcast, manager);
+        this(broadcast.id, broadcast, text, manager);
     }
 
     public long getBroadcastId() {
         return mBroadcastId;
     }
 
-    public boolean isRebroadcast() {
-        return mRebroadcast;
+    public String getText() {
+        return mText;
     }
 
     @Override
-    protected Request<Broadcast> onCreateRequest() {
-        return ApiRequests.newRebroadcastBroadcastRequest(mBroadcastId, mRebroadcast, getContext());
+    protected ApiRequest<Broadcast> onCreateRequest() {
+        return ApiService.getInstance().rebroadcastBroadcast(mBroadcastId, mText);
     }
 
     @Override
@@ -83,65 +84,46 @@ class RebroadcastBroadcastWriter extends ResourceWriter<RebroadcastBroadcastWrit
     @Override
     public void onResponse(Broadcast response) {
 
-        ToastUtils.show(mRebroadcast ? R.string.broadcast_rebroadcast_successful
-                : R.string.broadcast_unrebroadcast_successful, getContext());
+        ToastUtils.show(R.string.broadcast_rebroadcast_successful, getContext());
 
-        if (!mRebroadcast) {
-            // Delete the rebroadcast broadcast by user. Must be done before we
-            // update the broadcast so that we can retrieve rebroadcastId for the
-            // old one.
-            if (mBroadcast != null && mBroadcast.rebroadcastId != null) {
-                EventBusUtils.postAsync(new BroadcastDeletedEvent(mBroadcast.rebroadcastId, this));
-            }
+        // Post BroadcastRebroadcastedEvent first so that RebroadcastBroadcastFragment will set
+        // mRebroadcasted to true before the following BroadcastUpdatedEvents.
+        EventBusUtils.postAsync(new BroadcastRebroadcastedEvent(mBroadcastId, response, this));
+
+        if (response.parentBroadcast != null) {
+            EventBusUtils.postAsync(new BroadcastUpdatedEvent(response.parentBroadcast, this));
         }
-
-        EventBusUtils.postAsync(new BroadcastUpdatedEvent(response, this));
+        EventBusUtils.postAsync(new BroadcastUpdatedEvent(response.rebroadcastedBroadcast, this));
 
         stopSelf();
     }
 
     @Override
-    public void onErrorResponse(VolleyError error) {
+    public void onErrorResponse(ApiError error) {
 
         LogUtils.e(error.toString());
         Context context = getContext();
-        ToastUtils.show(context.getString(mRebroadcast ? R.string.broadcast_rebroadcast_failed_format
-                        : R.string.broadcast_unrebroadcast_failed_format,
+        ToastUtils.show(context.getString(R.string.broadcast_rebroadcast_failed_format,
                 ApiError.getErrorString(error, context)), context);
 
-        boolean notified = false;
-        if (mBroadcast != null && error instanceof ApiError) {
-            // Correct our local state if needed.
-            ApiError apiError = (ApiError) error;
-            Boolean shouldBeRebroadcasted = null;
-            if (apiError.code == Codes.RebroadcastBroadcast.ALREADY_REBROADCASTED) {
-                shouldBeRebroadcasted = true;
-            } else if (apiError.code == Codes.RebroadcastBroadcast.NOT_REBROADCASTED_YET) {
-                shouldBeRebroadcasted = false;
-            }
-            if (shouldBeRebroadcasted != null) {
-                mBroadcast.fixRebroadcasted(shouldBeRebroadcasted);
-                EventBusUtils.postAsync(new BroadcastUpdatedEvent(mBroadcast, this));
-                notified = true;
-            }
-        }
-        if (!notified) {
-            // Must notify to reset pending status. Off-screen items also needs to be invalidated.
-            EventBusUtils.postAsync(new BroadcastWriteFinishedEvent(mBroadcastId, this));
-        }
+        // Must notify to reset pending status. Off-screen items also needs to be invalidated.
+        EventBusUtils.postAsync(new BroadcastWriteFinishedEvent(mBroadcastId, this));
+
+        EventBusUtils.postAsync(new BroadcastRebroadcastErrorEvent(mBroadcastId, this));
 
         stopSelf();
     }
 
-    @Keep
-    public void onEventMainThread(BroadcastUpdatedEvent event) {
+    @Subscribe(threadMode = ThreadMode.POSTING)
+    public void onBroadcastUpdated(BroadcastUpdatedEvent event) {
 
         if (event.isFromMyself(this)) {
             return;
         }
 
-        if (event.broadcast.id == mBroadcast.id) {
-            mBroadcast = event.broadcast;
+        Broadcast updatedBroadcast = event.update(mBroadcastId, mBroadcast, this);
+        if (updatedBroadcast != null) {
+            mBroadcast = updatedBroadcast;
         }
     }
 }

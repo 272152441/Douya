@@ -7,17 +7,15 @@ package me.zhanghai.android.douya.broadcast.ui;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.support.annotation.Keep;
-import android.support.annotation.Nullable;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.SharedElementCallback;
-import android.support.v4.view.ViewCompat;
-import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.Toolbar;
+import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.Fragment;
+import androidx.core.app.SharedElementCallback;
+import androidx.core.view.ViewCompat;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -27,10 +25,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.ProgressBar;
 
-import com.android.volley.VolleyError;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.List;
 
@@ -49,37 +47,45 @@ import me.zhanghai.android.douya.eventbus.BroadcastCommentSendErrorEvent;
 import me.zhanghai.android.douya.eventbus.BroadcastCommentSentEvent;
 import me.zhanghai.android.douya.eventbus.EventBusUtils;
 import me.zhanghai.android.douya.network.api.ApiError;
-import me.zhanghai.android.douya.network.api.info.apiv2.Broadcast;
-import me.zhanghai.android.douya.network.api.info.apiv2.Comment;
-import me.zhanghai.android.douya.ui.ClickableSimpleAdapter;
+import me.zhanghai.android.douya.network.api.info.frodo.Broadcast;
+import me.zhanghai.android.douya.network.api.info.frodo.Comment;
+import me.zhanghai.android.douya.settings.info.Settings;
+import me.zhanghai.android.douya.ui.ConfirmDiscardContentDialogFragment;
+import me.zhanghai.android.douya.ui.DoubleClickToolbar;
+import me.zhanghai.android.douya.ui.FragmentFinishable;
+import me.zhanghai.android.douya.ui.GetOnLongClickListenerImageButton;
 import me.zhanghai.android.douya.ui.LoadMoreAdapter;
 import me.zhanghai.android.douya.ui.NoChangeAnimationItemAnimator;
 import me.zhanghai.android.douya.ui.OnVerticalScrollListener;
-import me.zhanghai.android.douya.util.CheatSheetUtils;
+import me.zhanghai.android.douya.ui.WebViewActivity;
 import me.zhanghai.android.douya.util.ClipboardUtils;
 import me.zhanghai.android.douya.util.DoubanUtils;
 import me.zhanghai.android.douya.util.FragmentUtils;
 import me.zhanghai.android.douya.util.ImeUtils;
 import me.zhanghai.android.douya.util.LogUtils;
+import me.zhanghai.android.douya.util.ShareUtils;
 import me.zhanghai.android.douya.util.ToastUtils;
+import me.zhanghai.android.douya.util.TooltipUtils;
 import me.zhanghai.android.douya.util.TransitionUtils;
 import me.zhanghai.android.douya.util.ViewUtils;
 
 public class BroadcastFragment extends Fragment implements BroadcastAndCommentListResource.Listener,
-        SingleBroadcastAdapter.Listener, CommentActionDialogFragment.Listener,
-        ConfirmDeleteCommentDialogFragment.Listener, ConfirmDeleteBroadcastDialogFragment.Listener {
+        SingleBroadcastAdapter.Listener, ConfirmUnrebroadcastBroadcastDialogFragment.Listener,
+        CommentActionDialogFragment.Listener, ConfirmDeleteCommentDialogFragment.Listener,
+        ConfirmDeleteBroadcastDialogFragment.Listener,
+        ConfirmDiscardContentDialogFragment.Listener {
 
     private static final String KEY_PREFIX = BroadcastFragment.class.getName() + '.';
 
-    private static final String EXTRA_BROADCAST = KEY_PREFIX + "broadcast";
     private static final String EXTRA_BROADCAST_ID = KEY_PREFIX + "broadcast_id";
+    private static final String EXTRA_BROADCAST = KEY_PREFIX + "broadcast";
     private static final String EXTRA_SHOW_SEND_COMMENT = KEY_PREFIX + "show_send_comment";
     private static final String EXTRA_TITLE = KEY_PREFIX + "title";
 
     @BindView(R.id.container)
     FrameLayout mContainerLayout;
     @BindView(R.id.toolbar)
-    Toolbar mToolbar;
+    DoubleClickToolbar mToolbar;
     @BindView(R.id.shared)
     View mSharedView;
     @BindView(R.id.swipe_refresh)
@@ -91,16 +97,17 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
     @BindView(R.id.comment)
     EditText mCommentEdit;
     @BindView(R.id.send)
-    ImageButton mSendButton;
+    GetOnLongClickListenerImageButton mSendButton;
 
-    private Menu mMenu;
+    private MenuItem mCopyTextMenuItem;
+    private MenuItem mDeleteMenuItem;
 
     private long mBroadcastId;
     private Broadcast mBroadcast;
     private boolean mShowSendComment;
     private String mTitle;
 
-    private BroadcastAndCommentListResource mBroadcastAndCommentListResource;
+    private BroadcastAndCommentListResource mResource;
 
     private SingleBroadcastAdapter mBroadcastAdapter;
     private CommentAdapter mCommentAdapter;
@@ -110,11 +117,11 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
                                                 boolean showSendComment, String title) {
         //noinspection deprecation
         BroadcastFragment fragment = new BroadcastFragment();
-        Bundle arguments = FragmentUtils.ensureArguments(fragment);
-        arguments.putLong(EXTRA_BROADCAST_ID, broadcastId);
-        arguments.putParcelable(EXTRA_BROADCAST, broadcast);
-        arguments.putBoolean(EXTRA_SHOW_SEND_COMMENT, showSendComment);
-        arguments.putString(EXTRA_TITLE, title);
+        FragmentUtils.getArgumentsBuilder(fragment)
+                .putLong(EXTRA_BROADCAST_ID, broadcastId)
+                .putParcelable(EXTRA_BROADCAST, broadcast)
+                .putBoolean(EXTRA_SHOW_SEND_COMMENT, showSendComment)
+                .putString(EXTRA_TITLE, title);
         return fragment;
     }
 
@@ -138,6 +145,8 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
         mTitle = arguments.getString(EXTRA_TITLE);
 
         setHasOptionsMenu(true);
+
+        EventBusUtils.register(this);
     }
 
     @Nullable
@@ -159,19 +168,14 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
         super.onActivityCreated(savedInstanceState);
 
         CustomTabsHelperFragment.attachTo(this);
-        mBroadcastAndCommentListResource = BroadcastAndCommentListResource.attachTo(mBroadcastId,
+        mResource = BroadcastAndCommentListResource.attachTo(mBroadcastId,
                 mBroadcast, this);
 
-        final AppCompatActivity activity = (AppCompatActivity) getActivity();
+        AppCompatActivity activity = (AppCompatActivity) getActivity();
         activity.setTitle(getTitle());
         activity.setSupportActionBar(mToolbar);
 
-        mContainerLayout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                ActivityCompat.finishAfterTransition(activity);
-            }
-        });
+        mContainerLayout.setOnClickListener(view -> onFinish());
         ViewCompat.setTransitionName(mSharedView, Broadcast.makeTransitionName(mBroadcastId));
         // This magically gives better visual effect when the broadcast is partially visible. Using
         // setEnterSharedElementCallback() disables this hack when no transition is used to start
@@ -185,53 +189,48 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
             }
         });
 
-        mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                mBroadcastAndCommentListResource.loadBroadcast();
-                mBroadcastAndCommentListResource.loadCommentList(false);
-            }
+        mToolbar.setOnDoubleClickListener(view -> {
+            mBroadcastCommentList.smoothScrollToPosition(0);
+            return true;
+        });
+
+        mSwipeRefreshLayout.setOnRefreshListener(() -> {
+            mResource.loadBroadcast();
+            mResource.loadCommentList(false);
         });
 
         mBroadcastCommentList.setHasFixedSize(true);
         mBroadcastCommentList.setItemAnimator(new NoChangeAnimationItemAnimator());
         mBroadcastCommentList.setLayoutManager(new LinearLayoutManager(activity));
         mBroadcastAdapter = new SingleBroadcastAdapter(null, this);
-        setBroadcast(mBroadcastAndCommentListResource.getBroadcast());
-        mCommentAdapter = new CommentAdapter(mBroadcastAndCommentListResource.getCommentList(),
-                new ClickableSimpleAdapter.OnItemClickListener<Comment,
-                        CommentAdapter.ViewHolder>() {
-                    @Override
-                    public void onItemClick(RecyclerView parent, Comment item,
-                                            CommentAdapter.ViewHolder holder) {
-                        onShowCommentAction(item);
-                    }
-                });
-        mAdapter = new LoadMoreAdapter(R.layout.load_more_item, mBroadcastAdapter, mCommentAdapter);
+        // BroadcastLayout will take care of showing the effective broadcast.
+        //noinspection deprecation
+        setBroadcast(mResource.getBroadcast());
+        mCommentAdapter = new CommentAdapter(mResource.getCommentList(),
+                (parent, itemView, item, position) -> onShowCommentAction(item));
+        mAdapter = new LoadMoreAdapter(mBroadcastAdapter, mCommentAdapter);
         mBroadcastCommentList.setAdapter(mAdapter);
         mBroadcastCommentList.addOnScrollListener(new OnVerticalScrollListener() {
             public void onScrolledToBottom() {
-                mBroadcastAndCommentListResource.loadCommentList(true);
+                mResource.loadCommentList(true);
             }
         });
 
-        CheatSheetUtils.setup(mSendButton);
-        mSendButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                onSendComment();
+        mSendButton.setOnClickListener(view -> onSendComment());
+        TooltipUtils.setup(mSendButton);
+        View.OnLongClickListener sendTooltipListener = mSendButton.getOnLongClickListener();
+        mSendButton.setOnLongClickListener(view -> {
+            if (!Settings.LONG_CLICK_TO_SHOW_SEND_COMMENT_ACTIVITY.getValue()) {
+                return sendTooltipListener.onLongClick(view);
             }
+            onShowSendCommentActivity();
+            return true;
         });
         updateSendCommentStatus();
 
         if (savedInstanceState == null) {
             if (mShowSendComment) {
-                TransitionUtils.postAfterTransition(this, new Runnable() {
-                    @Override
-                    public void run() {
-                        onShowSendComment();
-                    }
-                });
+                TransitionUtils.postAfterTransition(this, this::onShowCommentIme);
             }
         }
 
@@ -240,24 +239,12 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-
-        EventBusUtils.register(this);
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-
-        EventBusUtils.unregister(this);
-    }
-
-    @Override
     public void onDestroy() {
         super.onDestroy();
 
-        mBroadcastAndCommentListResource.detach();
+        EventBusUtils.unregister(this);
+
+        mResource.detach();
     }
 
     @Override
@@ -265,7 +252,8 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
         super.onCreateOptionsMenu(menu, inflater);
 
         inflater.inflate(R.menu.broadcast, menu);
-        mMenu = menu;
+        mCopyTextMenuItem = menu.findItem(R.id.action_copy_text);
+        mDeleteMenuItem = menu.findItem(R.id.action_delete);
     }
 
     @Override
@@ -276,27 +264,33 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
     }
 
     private void updateOptionsMenu() {
-        if (mMenu == null) {
+        if (mCopyTextMenuItem == null && mDeleteMenuItem == null) {
             return;
         }
-        Broadcast broadcast = mBroadcastAndCommentListResource.getBroadcast();
+        Broadcast broadcast = mResource.getEffectiveBroadcast();
         boolean hasBroadcast = broadcast != null;
-        mMenu.findItem(R.id.action_copy_text).setVisible(hasBroadcast);
-        boolean canDelete = hasBroadcast && broadcast.isAuthorOneself(getActivity());
-        mMenu.findItem(R.id.action_delete).setVisible(canDelete);
+        mCopyTextMenuItem.setEnabled(hasBroadcast);
+        boolean canDelete = hasBroadcast && broadcast.isAuthorOneself();
+        mDeleteMenuItem.setVisible(canDelete);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case android.R.id.home:
-                ActivityCompat.finishAfterTransition(getActivity());
+                onFinish();
                 return true;
             case R.id.action_copy_text:
                 copyText();
                 return true;
             case R.id.action_delete:
                 onDeleteBroadcast();
+                return true;
+            case R.id.action_share:
+                share();
+                return true;
+            case R.id.action_view_on_web:
+                viewOnWeb();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -318,7 +312,7 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
     }
 
     @Override
-    public void onLoadBroadcastError(int requestCode, VolleyError error) {
+    public void onLoadBroadcastError(int requestCode, ApiError error) {
         LogUtils.e(error.toString());
         Activity activity = getActivity();
         ToastUtils.show(ApiError.getErrorString(error, activity), activity);
@@ -331,7 +325,7 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
 
     @Override
     public void onBroadcastRemoved(int requestCode) {
-        getActivity().finish();
+        finish();
     }
 
     @Override
@@ -361,7 +355,7 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
     }
 
     @Override
-    public void onLoadCommentListError(int requestCode, VolleyError error) {
+    public void onLoadCommentListError(int requestCode, ApiError error) {
         LogUtils.e(error.toString());
         Activity activity = getActivity();
         ToastUtils.show(ApiError.getErrorString(error, activity), activity);
@@ -370,34 +364,32 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
     @Override
     public void onCommentListChanged(int requestCode, List<Comment> newCommentList) {
         mCommentAdapter.replace(newCommentList);
-        BroadcastCommentCountFixer.onCommentListChanged(
-                mBroadcastAndCommentListResource.getBroadcast(),
-                mBroadcastAndCommentListResource.getCommentList(), this);
+        BroadcastCommentCountFixer.onCommentListChanged(mResource.getEffectiveBroadcast(),
+                mResource.getCommentList(), this);
     }
 
     @Override
     public void onCommentListAppended(int requestCode, List<Comment> appendedCommentList) {
         mCommentAdapter.addAll(appendedCommentList);
-        BroadcastCommentCountFixer.onCommentListChanged(
-                mBroadcastAndCommentListResource.getBroadcast(),
-                mBroadcastAndCommentListResource.getCommentList(), this);
+        BroadcastCommentCountFixer.onCommentListChanged(mResource.getEffectiveBroadcast(),
+                mResource.getCommentList(), this);
     }
 
     @Override
     public void onCommentRemoved(int requestCode, int position) {
         mCommentAdapter.remove(position);
-        BroadcastCommentCountFixer.onCommentRemoved(
-                mBroadcastAndCommentListResource.getBroadcast(), this);
+        BroadcastCommentCountFixer.onCommentRemoved(mResource.getEffectiveBroadcast(), this);
     }
 
     private void updateRefreshing() {
-        boolean loadingBroadcast = mBroadcastAndCommentListResource.isLoadingBroadcast();
-        boolean hasBroadcast = mBroadcastAndCommentListResource.hasBroadcast();
-        boolean loadingCommentList = mBroadcastAndCommentListResource.isLoadingCommentList();
+        boolean loadingBroadcast = mResource.isLoadingBroadcast();
+        //noinspection deprecation
+        boolean hasBroadcast = mResource.hasBroadcast();
+        boolean loadingCommentList = mResource.isLoadingCommentList();
         mSwipeRefreshLayout.setRefreshing(loadingBroadcast
                 && (mSwipeRefreshLayout.isRefreshing() || hasBroadcast));
         ViewUtils.setVisibleOrGone(mProgress, loadingBroadcast && !hasBroadcast);
-        mAdapter.setProgressVisible(hasBroadcast && loadingCommentList);
+        mAdapter.setLoading(hasBroadcast && loadingCommentList);
     }
 
     @Override
@@ -406,13 +398,31 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
     }
 
     @Override
-    public void onRebroadcast(Broadcast broadcast, boolean rebroadcast) {
-        RebroadcastBroadcastManager.getInstance().write(broadcast, rebroadcast, getActivity());
+    public void onRebroadcast(Broadcast broadcast, boolean rebroadcast, boolean quick) {
+        if (rebroadcast) {
+            if (quick) {
+                RebroadcastBroadcastManager.getInstance().write(broadcast.getEffectiveBroadcast(),
+                        null, getActivity());
+            } else {
+                startActivity(RebroadcastBroadcastActivity.makeIntent(broadcast, getActivity()));
+            }
+        } else {
+            if (quick) {
+                DeleteBroadcastManager.getInstance().write(broadcast, getActivity());
+            } else {
+                ConfirmUnrebroadcastBroadcastDialogFragment.show(broadcast, this);
+            }
+        }
+    }
+
+    @Override
+    public void unrebroadcastBroadcast(Broadcast broadcast) {
+        DeleteBroadcastManager.getInstance().write(broadcast, getActivity());
     }
 
     @Override
     public void onComment(Broadcast broadcast) {
-        onShowSendComment();
+        onShowCommentIme();
     }
 
     @Override
@@ -422,39 +432,36 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
 
     private void onShowCommentAction(Comment comment) {
         boolean canReplyTo = canSendComment();
-        Activity activity = getActivity();
         boolean canDelete = (mBroadcastAdapter.hasBroadcast()
-                && mBroadcastAdapter.getBroadcast().isAuthorOneself(activity))
-                || comment.isAuthorOneself(activity);
+                && mBroadcastAdapter.getBroadcast().isAuthorOneself())
+                || comment.isAuthorOneself();
         CommentActionDialogFragment.show(comment, canReplyTo, canDelete, this);
     }
 
     @Override
     public void onReplyToComment(Comment comment) {
         mCommentEdit.getText().replace(mCommentEdit.getSelectionStart(),
-                mCommentEdit.getSelectionEnd(), DoubanUtils.getAtUserString(comment.author));
-        onShowSendComment();
+                mCommentEdit.getSelectionEnd(), DoubanUtils.makeMentionString(comment.author));
+        onShowCommentIme();
     }
 
     @Override
     public void onCopyCommentText(Comment comment) {
-        Activity activity = getActivity();
-        ClipboardUtils.copyText(comment.getClipboardLabel(), comment.getClipboardText(activity),
-                activity);
+        ClipboardUtils.copy(comment, getActivity());
     }
 
     @Override
     public void onDeleteComment(Comment comment) {
-        ConfirmDeleteCommentDialogFragment.show(comment, this);
+        ConfirmDeleteCommentDialogFragment.show(comment.id, this);
     }
 
     @Override
-    public void deleteComment(Comment comment) {
-        DeleteBroadcastCommentManager.getInstance().write(
-                mBroadcastAndCommentListResource.getBroadcastId(), comment.id, getActivity());
+    public void deleteComment(long commentId) {
+        DeleteBroadcastCommentManager.getInstance().write(mResource.getEffectiveBroadcastId(),
+                commentId, getActivity());
     }
 
-    private void onShowSendComment() {
+    private void onShowCommentIme() {
         if (canSendComment()) {
             ImeUtils.showIme(mCommentEdit);
         } else {
@@ -475,56 +482,61 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
 
     private void sendComment(String comment) {
 
-        SendBroadcastCommentManager.getInstance().write(
-                mBroadcastAndCommentListResource.getBroadcastId(), comment, getActivity());
+        SendBroadcastCommentManager.getInstance().write(mResource.getEffectiveBroadcastId(),
+                comment, getActivity());
 
         updateSendCommentStatus();
     }
 
-    @Keep
-    public void onEventMainThread(BroadcastCommentSentEvent event) {
+    private void onShowSendCommentActivity() {
+        startActivity(SendCommentActivity.makeIntent(mResource.getEffectiveBroadcastId(),
+                mCommentEdit.getText(), getActivity()));
+    }
+
+    @Subscribe(threadMode = ThreadMode.POSTING)
+    public void onBroadcastCommentSent(BroadcastCommentSentEvent event) {
 
         if (event.isFromMyself(this)) {
             return;
         }
 
-        if (event.broadcastId == mBroadcastAndCommentListResource.getBroadcastId()) {
+        if (mResource.isEffectiveBroadcastId(event.broadcastId)) {
             mBroadcastCommentList.scrollToPosition(mAdapter.getItemCount() - 1);
             mCommentEdit.setText(null);
             updateSendCommentStatus();
         }
     }
 
-    @Keep
-    public void onEventMainThread(BroadcastCommentSendErrorEvent event) {
+    @Subscribe(threadMode = ThreadMode.POSTING)
+    public void onBroadcastCommentSendError(BroadcastCommentSendErrorEvent event) {
 
         if (event.isFromMyself(this)) {
             return;
         }
 
-        if (event.broadcastId == mBroadcastAndCommentListResource.getBroadcastId()) {
+        if (mResource.isEffectiveBroadcastId(event.broadcastId)) {
             updateSendCommentStatus();
         }
     }
 
     private boolean canSendComment() {
-        Broadcast broadcast = mBroadcastAndCommentListResource.getBroadcast();
+        Broadcast broadcast = mResource.getEffectiveBroadcast();
         return broadcast != null && broadcast.canComment();
     }
 
     private void updateSendCommentStatus() {
         boolean canSendComment = canSendComment();
         SendBroadcastCommentManager manager = SendBroadcastCommentManager.getInstance();
-        long broadcastId = mBroadcastAndCommentListResource.getBroadcastId();
-        boolean sendingComment = manager.isWriting(broadcastId);
+        boolean hasBroadcast = mResource.hasEffectiveBroadcast();
+        boolean sendingComment = hasBroadcast && manager.isWriting(
+                mResource.getEffectiveBroadcastId());
         boolean enabled = canSendComment && !sendingComment;
         mCommentEdit.setEnabled(enabled);
         mSendButton.setEnabled(enabled);
-        boolean hasBroadcast = mBroadcastAndCommentListResource.hasBroadcast();
         mCommentEdit.setHint(!hasBroadcast || canSendComment ? R.string.broadcast_send_comment_hint
                 : R.string.broadcast_send_comment_hint_disabled);
         if (sendingComment) {
-            mCommentEdit.setText(manager.getComment(broadcastId));
+            mCommentEdit.setText(manager.getComment(mResource.getEffectiveBroadcastId()));
         }
     }
 
@@ -537,8 +549,7 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
             return;
         }
 
-        ClipboardUtils.copyText(broadcast.getClipboradLabel(), broadcast.getClipboardText(activity),
-                activity);
+        ClipboardUtils.copy(broadcast, activity);
     }
 
     private void onDeleteBroadcast() {
@@ -547,7 +558,45 @@ public class BroadcastFragment extends Fragment implements BroadcastAndCommentLi
 
     @Override
     public void deleteBroadcast() {
-        DeleteBroadcastManager.getInstance().write(
-                mBroadcastAndCommentListResource.getBroadcastId(), getActivity());
+        DeleteBroadcastManager.getInstance().write(mResource.getEffectiveBroadcast(),
+                getActivity());
+    }
+
+    private void share() {
+        ShareUtils.shareText(makeUrl(), getActivity());
+    }
+
+    private void viewOnWeb() {
+        startActivity(WebViewActivity.makeIntent(makeUrl(), true, getActivity()));
+    }
+
+    private String makeUrl() {
+        if (mResource.hasEffectiveBroadcast()) {
+            return mResource.getEffectiveBroadcast().getUrl();
+        } else {
+            //noinspection deprecation
+            return DoubanUtils.makeBroadcastUrl(mResource.getBroadcastId());
+        }
+    }
+
+    public void onFinish() {
+        if (mCommentEdit.getText().length() > 0) {
+            ConfirmDiscardContentDialogFragment.show(this);
+        } else {
+            finishAfterTransition();
+        }
+    }
+
+    @Override
+    public void discardContent() {
+        finishAfterTransition();
+    }
+
+    private void finish() {
+        FragmentFinishable.finish(getActivity());
+    }
+
+    private void finishAfterTransition() {
+        FragmentFinishable.finishAfterTransition(getActivity());
     }
 }

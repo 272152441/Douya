@@ -6,23 +6,12 @@
 package me.zhanghai.android.douya.review.content;
 
 import android.os.Bundle;
-import android.support.annotation.Keep;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
 
-import com.android.volley.VolleyError;
-
-import java.util.Collections;
-import java.util.List;
-
-import me.zhanghai.android.douya.content.ResourceFragment;
-import me.zhanghai.android.douya.eventbus.EventBusUtils;
-import me.zhanghai.android.douya.eventbus.ReviewDeletedEvent;
-import me.zhanghai.android.douya.eventbus.ReviewUpdatedEvent;
-import me.zhanghai.android.douya.network.RequestFragment;
 import me.zhanghai.android.douya.network.api.ApiRequest;
-import me.zhanghai.android.douya.network.api.ApiRequests;
-import me.zhanghai.android.douya.network.api.info.frodo.Review;
+import me.zhanghai.android.douya.network.api.ApiService;
+import me.zhanghai.android.douya.network.api.info.frodo.CollectableItem;
 import me.zhanghai.android.douya.network.api.info.frodo.ReviewList;
 import me.zhanghai.android.douya.util.FragmentUtils;
 
@@ -30,51 +19,34 @@ public class ItemReviewListResource extends BaseReviewListResource {
 
     private static final String KEY_PREFIX = ItemReviewListResource.class.getName() + '.';
 
-    public static final String EXTRA_ITEM_ID = KEY_PREFIX + "item_id";
+    private static final String EXTRA_ITEM_TYPE = KEY_PREFIX + "item_type";
+    private static final String EXTRA_ITEM_ID = KEY_PREFIX + "item_id";
 
+    private CollectableItem.Type mItemType;
     private long mItemId;
 
     private static final String FRAGMENT_TAG_DEFAULT = ItemReviewListResource.class.getName();
 
-    private static ItemReviewListResource newInstance(long itemId) {
+    private static ItemReviewListResource newInstance(CollectableItem.Type itemType, long itemId) {
         //noinspection deprecation
-        ItemReviewListResource resource = new ItemReviewListResource();
-        resource.setArguments(itemId);
-        return resource;
+        return new ItemReviewListResource().setArguments(itemType, itemId);
     }
 
-    public static ItemReviewListResource attachTo(long itemId, FragmentActivity activity,
-                                                  String tag, int requestCode) {
-        return attachTo(itemId, activity, tag, true, null, requestCode);
-    }
-
-    public static ItemReviewListResource attachTo(long itemId, FragmentActivity activity) {
-        return attachTo(itemId, activity, FRAGMENT_TAG_DEFAULT, REQUEST_CODE_INVALID);
-    }
-
-    public static ItemReviewListResource attachTo(long itemId, Fragment fragment, String tag,
-                                                  int requestCode) {
-        return attachTo(itemId, fragment.getActivity(), tag, false, fragment, requestCode);
-    }
-
-    public static ItemReviewListResource attachTo(long itemId, Fragment fragment) {
-        return attachTo(itemId, fragment, FRAGMENT_TAG_DEFAULT, REQUEST_CODE_INVALID);
-    }
-
-    private static ItemReviewListResource attachTo(long itemId, FragmentActivity activity,
-                                                   String tag, boolean targetAtActivity,
-                                                   Fragment targetFragment, int requestCode) {
-        ItemReviewListResource resource = FragmentUtils.findByTag(activity, tag);
-        if (resource == null) {
-            resource = newInstance(itemId);
-            if (targetAtActivity) {
-                resource.targetAtActivity(requestCode);
-            } else {
-                resource.targetAtFragment(targetFragment, requestCode);
-            }
-            FragmentUtils.add(resource, activity, tag);
+    public static ItemReviewListResource attachTo(CollectableItem.Type itemType, long itemId,
+                                                  Fragment fragment, String tag, int requestCode) {
+        FragmentActivity activity = fragment.getActivity();
+        ItemReviewListResource instance = FragmentUtils.findByTag(activity, tag);
+        if (instance == null) {
+            instance = newInstance(itemType, itemId);
+            FragmentUtils.add(instance, activity, tag);
         }
-        return resource;
+        instance.setTarget(fragment, requestCode);
+        return instance;
+    }
+
+    public static ItemReviewListResource attachTo(CollectableItem.Type itemType, long itemId,
+                                                  Fragment fragment) {
+        return attachTo(itemType, itemId, fragment, FRAGMENT_TAG_DEFAULT, REQUEST_CODE_INVALID);
     }
 
     /**
@@ -82,20 +54,23 @@ public class ItemReviewListResource extends BaseReviewListResource {
      */
     public ItemReviewListResource() {}
 
-    private void setArguments(long itemId) {
-        FragmentUtils.ensureArguments(this)
+    protected ItemReviewListResource setArguments(CollectableItem.Type itemType, long itemId) {
+        FragmentUtils.getArgumentsBuilder(this)
+                .putSerializable(EXTRA_ITEM_TYPE, itemType)
                 .putLong(EXTRA_ITEM_ID, itemId);
+        return this;
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        mItemType = (CollectableItem.Type) getArguments().getSerializable(EXTRA_ITEM_TYPE);
         mItemId = getArguments().getLong(EXTRA_ITEM_ID);
     }
 
     @Override
     protected ApiRequest<ReviewList> onCreateRequest(Integer start, Integer count) {
-        return ApiRequests.newItemReviewListRequest(mItemId, start, count, getActivity());
+        return ApiService.getInstance().getItemReviewList(mItemType, mItemId, start, count);
     }
 }

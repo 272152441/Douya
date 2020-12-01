@@ -5,59 +5,46 @@
 
 package me.zhanghai.android.douya.broadcast.content;
 
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
+import android.os.Bundle;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
 
-import java.util.List;
-
+import me.zhanghai.android.douya.network.api.ApiError;
 import me.zhanghai.android.douya.network.api.ApiRequest;
-import me.zhanghai.android.douya.network.api.ApiRequests;
-import me.zhanghai.android.douya.network.api.info.apiv2.User;
+import me.zhanghai.android.douya.network.api.ApiService;
+import me.zhanghai.android.douya.network.api.info.frodo.LikerList;
+import me.zhanghai.android.douya.user.content.BaseUserListResource;
 import me.zhanghai.android.douya.util.FragmentUtils;
 
-public class BroadcastLikerListResource extends BroadcastUserListResource {
+public class BroadcastLikerListResource extends BaseUserListResource<LikerList> {
 
     private static final String FRAGMENT_TAG_DEFAULT = BroadcastLikerListResource.class.getName();
 
+    private final String KEY_PREFIX = BroadcastLikerListResource.class.getName() + '.';
+
+    private final String EXTRA_BROADCAST_ID = KEY_PREFIX + "broadcast_id";
+
+    private long mBroadcastId;
+
     private static BroadcastLikerListResource newInstance(long broadcastId) {
         //noinspection deprecation
-        BroadcastLikerListResource resource = new BroadcastLikerListResource();
-        resource.setArguments(broadcastId);
-        return resource;
-    }
-
-    public static BroadcastLikerListResource attachTo(long broadcastId, FragmentActivity activity,
-                                                      String tag, int requestCode) {
-        return attachTo(broadcastId, activity, tag, true, null, requestCode);
-    }
-
-    public static BroadcastLikerListResource attachTo(long broadcastId, FragmentActivity activity) {
-        return attachTo(broadcastId, activity, FRAGMENT_TAG_DEFAULT, REQUEST_CODE_INVALID);
+        return new BroadcastLikerListResource().setArguments(broadcastId);
     }
 
     public static BroadcastLikerListResource attachTo(long broadcastId, Fragment fragment,
                                                       String tag, int requestCode) {
-        return attachTo(broadcastId, fragment.getActivity(), tag, false, fragment, requestCode);
+        FragmentActivity activity = fragment.getActivity();
+        BroadcastLikerListResource instance = FragmentUtils.findByTag(activity, tag);
+        if (instance == null) {
+            instance = newInstance(broadcastId);
+            FragmentUtils.add(instance, activity, tag);
+        }
+        instance.setTarget(fragment, requestCode);
+        return instance;
     }
 
     public static BroadcastLikerListResource attachTo(long broadcastId, Fragment fragment) {
         return attachTo(broadcastId, fragment, FRAGMENT_TAG_DEFAULT, REQUEST_CODE_INVALID);
-    }
-
-    private static BroadcastLikerListResource attachTo(long broadcastId, FragmentActivity activity,
-                                                      String tag, boolean targetAtActivity,
-                                                      Fragment targetFragment, int requestCode) {
-        BroadcastLikerListResource resource = FragmentUtils.findByTag(activity, tag);
-        if (resource == null) {
-            resource = newInstance(broadcastId);
-            if (targetAtActivity) {
-                resource.targetAtActivity(requestCode);
-            } else {
-                resource.targetAtFragment(targetFragment, requestCode);
-            }
-            FragmentUtils.add(resource, activity, tag);
-        }
-        return resource;
     }
 
     /**
@@ -65,9 +52,31 @@ public class BroadcastLikerListResource extends BroadcastUserListResource {
      */
     public BroadcastLikerListResource() {}
 
+    protected BroadcastLikerListResource setArguments(long broadcastId) {
+        FragmentUtils.getArgumentsBuilder(this)
+                .putLong(EXTRA_BROADCAST_ID, broadcastId);
+        return this;
+    }
+
+    protected long getBroadcastId() {
+        return mBroadcastId;
+    }
+
     @Override
-    protected ApiRequest<List<User>> onCreateRequest(Integer start, Integer count) {
-        return ApiRequests.newBroadcastLikerListRequest(getBroadcastId(), start, count,
-                getActivity());
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        mBroadcastId = getArguments().getLong(EXTRA_BROADCAST_ID);
+    }
+
+    @Override
+    protected ApiRequest<LikerList> onCreateRequest(Integer start, Integer count) {
+        return ApiService.getInstance().getBroadcastLikerList(getBroadcastId(), start, count);
+    }
+
+    @Override
+    protected void onCallRawLoadFinished(boolean more, int count, boolean successful,
+                                         LikerList response, ApiError error) {
+        onRawLoadFinished(more, count, successful, successful ? response.likers : null, error);
     }
 }

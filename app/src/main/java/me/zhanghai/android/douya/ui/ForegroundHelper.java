@@ -5,44 +5,41 @@
 
 package me.zhanghai.android.douya.ui;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
-import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
-import android.support.annotation.NonNull;
-import android.support.v4.graphics.drawable.DrawableCompat;
-import android.support.v4.view.GravityCompat;
-import android.support.v4.view.ViewCompat;
+import androidx.annotation.NonNull;
+import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.core.view.GravityCompat;
+import androidx.core.view.ViewCompat;
+import androidx.appcompat.widget.TintTypedArray;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.FrameLayout;
 
 public class ForegroundHelper {
 
-    //com.android.internal.R.attr.foregroundInsidePadding
-    private static final int COM_ANDROID_INTERNAL_R_ATTR_FOREGROUND_INSIDE_PADDING = -300063;
-    private static final int[] STYLEABLE = new int[] {
+    private static final int[] STYLEABLE = {
             android.R.attr.foreground,
-            android.R.attr.foregroundGravity,
-            COM_ANDROID_INTERNAL_R_ATTR_FOREGROUND_INSIDE_PADDING
+            android.R.attr.foregroundGravity
     };
     private static final int STYLEABLE_ANDROID_FOREGROUND = 0;
     private static final int STYLEABLE_ANDROID_FOREGROUND_GRAVITY = 1;
-    private static final int STYLEABLE_ANDROID_FOREGROUND_INSIDE_PADDING = 2;
 
     private Delegate mDelegate;
 
-    private boolean mHasFrameworkBackground;
+    private boolean mHasFrameworkForeground;
 
     private Drawable mForeground;
 
     private final Rect mSelfBounds = new Rect();
     private final Rect mOverlayBounds = new Rect();
     private int mForegroundGravity = Gravity.FILL;
-    private boolean mForegroundInPadding = true;
 
     private boolean mForegroundBoundsChanged = false;
 
@@ -50,17 +47,20 @@ public class ForegroundHelper {
         mDelegate = delegate;
     }
 
+    @SuppressLint("RestrictedApi")
     public void init(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
 
-        // TODO: Check for FrameLayout
-        mHasFrameworkBackground = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                && context.getApplicationInfo().targetSdkVersion >= Build.VERSION_CODES.M;
+        // @see View#View(android.content.Context, android.util.AttributeSet, int, int)
+        mHasFrameworkForeground = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                    && context.getApplicationInfo().targetSdkVersion >= Build.VERSION_CODES.M)
+                || mDelegate.getOwner() instanceof FrameLayout;
 
-        if (mHasFrameworkBackground) {
+        if (mHasFrameworkForeground) {
             return;
         }
 
-        TypedArray a = context.obtainStyledAttributes(attrs, STYLEABLE, defStyleAttr, defStyleRes);
+        TintTypedArray a = TintTypedArray.obtainStyledAttributes(context, attrs, STYLEABLE,
+                defStyleAttr, defStyleRes);
 
         mForegroundGravity = a.getInt(STYLEABLE_ANDROID_FOREGROUND_GRAVITY, mForegroundGravity);
 
@@ -69,14 +69,12 @@ public class ForegroundHelper {
             setForeground(foreground);
         }
 
-        mForegroundInPadding = a.getBoolean(STYLEABLE_ANDROID_FOREGROUND_INSIDE_PADDING, true);
-
         a.recycle();
     }
 
     public int getForegroundGravity() {
 
-        if (mHasFrameworkBackground) {
+        if (mHasFrameworkForeground) {
             return mDelegate.superGetForegroundGravity();
         }
 
@@ -85,7 +83,7 @@ public class ForegroundHelper {
 
     public void setForegroundGravity(int foregroundGravity) {
 
-        if (mHasFrameworkBackground) {
+        if (mHasFrameworkForeground) {
             mDelegate.superSetForegroundGravity(foregroundGravity);
             return;
         }
@@ -109,7 +107,7 @@ public class ForegroundHelper {
     public void setVisibility(int visibility) {
         mDelegate.superSetVisibility(visibility);
 
-        if (mHasFrameworkBackground) {
+        if (mHasFrameworkForeground) {
             return;
         }
 
@@ -120,7 +118,7 @@ public class ForegroundHelper {
 
     public boolean verifyDrawable(Drawable who) {
 
-        if (mHasFrameworkBackground) {
+        if (mHasFrameworkForeground) {
             return mDelegate.superVerifyDrawable(who);
         }
 
@@ -130,7 +128,7 @@ public class ForegroundHelper {
     public void jumpDrawablesToCurrentState() {
         mDelegate.superJumpDrawablesToCurrentState();
 
-        if (mHasFrameworkBackground) {
+        if (mHasFrameworkForeground) {
             return;
         }
 
@@ -142,7 +140,7 @@ public class ForegroundHelper {
     public void drawableStateChanged() {
         mDelegate.superDrawableStateChanged();
 
-        if (mHasFrameworkBackground) {
+        if (mHasFrameworkForeground) {
             return;
         }
 
@@ -155,7 +153,7 @@ public class ForegroundHelper {
     public void drawableHotspotChanged(float x, float y) {
         mDelegate.superDrawableHotspotChanged(x, y);
 
-        if (mHasFrameworkBackground) {
+        if (mHasFrameworkForeground) {
             return;
         }
 
@@ -166,7 +164,7 @@ public class ForegroundHelper {
 
     public void setForeground(Drawable foreground) {
 
-        if (mHasFrameworkBackground) {
+        if (mHasFrameworkForeground) {
             mDelegate.superSetForeground(foreground);
             return;
         }
@@ -199,7 +197,7 @@ public class ForegroundHelper {
 
     public Drawable getForeground() {
 
-        if (mHasFrameworkBackground) {
+        if (mHasFrameworkForeground) {
             return mDelegate.superGetForeground();
         }
 
@@ -209,7 +207,7 @@ public class ForegroundHelper {
     public void onLayout(boolean changed, int left, int top, int right, int bottom) {
         mDelegate.superOnLayout(changed, left, top, right, bottom);
 
-        if (mHasFrameworkBackground) {
+        if (mHasFrameworkForeground) {
             return;
         }
 
@@ -219,7 +217,7 @@ public class ForegroundHelper {
     public void onSizeChanged(int w, int h, int oldw, int oldh) {
         mDelegate.superOnSizeChanged(w, h, oldw, oldh);
 
-        if (mHasFrameworkBackground) {
+        if (mHasFrameworkForeground) {
             return;
         }
 
@@ -229,7 +227,7 @@ public class ForegroundHelper {
     public void draw(@NonNull Canvas canvas) {
         mDelegate.superDraw(canvas);
 
-        if (mHasFrameworkBackground) {
+        if (mHasFrameworkForeground) {
             return;
         }
 
@@ -248,12 +246,7 @@ public class ForegroundHelper {
                 int w = owner.getRight() - owner.getLeft();
                 int h = owner.getBottom() - owner.getTop();
 
-                if (mForegroundInPadding) {
-                    selfBounds.set(0, 0, w, h);
-                } else {
-                    selfBounds.set(owner.getPaddingLeft(), owner.getPaddingTop(),
-                            w - owner.getPaddingRight(), h - owner.getPaddingBottom());
-                }
+                selfBounds.set(0, 0, w, h);
 
                 int layoutDirection = ViewCompat.getLayoutDirection(owner);
                 GravityCompat.apply(mForegroundGravity, foreground.getIntrinsicWidth(),

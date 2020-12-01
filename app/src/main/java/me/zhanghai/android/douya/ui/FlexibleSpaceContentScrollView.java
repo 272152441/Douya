@@ -11,7 +11,6 @@ import android.os.Build;
 import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
-import android.view.View;
 import android.widget.ScrollView;
 
 public class FlexibleSpaceContentScrollView extends ScrollView implements FlexibleSpaceContentView {
@@ -60,7 +59,7 @@ public class FlexibleSpaceContentScrollView extends ScrollView implements Flexib
         // responsibility of saving state to FlexibleSpaceLayout.
         int scrollY = getScrollY();
         setScrollY(0);
-        final Parcelable savedState = super.onSaveInstanceState();
+        Parcelable savedState = super.onSaveInstanceState();
         setScrollY(scrollY);
         return savedState;
     }

@@ -5,20 +5,16 @@
 
 package me.zhanghai.android.douya.user.content;
 
-import com.android.volley.VolleyError;
-
 import java.util.List;
 
-import me.zhanghai.android.douya.network.api.ApiRequest;
-import me.zhanghai.android.douya.network.api.info.apiv2.User;
+import me.zhanghai.android.douya.network.api.ApiError;
+import me.zhanghai.android.douya.network.api.info.frodo.SimpleUser;
 
-public abstract class RawUserListResource extends BaseUserListResource<List<User>> {
-
-    protected abstract ApiRequest<List<User>> onCreateRequest(Integer start, Integer count);
+public abstract class RawUserListResource extends BaseUserListResource<List<SimpleUser>> {
 
     @Override
-    protected void onDeliverLoadFinished(boolean successful, List<User> userList, VolleyError error,
-                                         boolean loadMore, int count) {
-        onLoadFinished(successful, userList, error, loadMore, count);
+    protected void onCallRawLoadFinished(boolean more, int count, boolean successful,
+                                         List<SimpleUser> response, ApiError error) {
+        onRawLoadFinished(more, count, successful, response, error);
     }
 }

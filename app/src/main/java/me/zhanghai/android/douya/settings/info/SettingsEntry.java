@@ -5,34 +5,39 @@
 
 package me.zhanghai.android.douya.settings.info;
 
-import android.content.Context;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 
+import me.zhanghai.android.douya.DouyaApplication;
 import me.zhanghai.android.douya.util.SharedPrefsUtils;
 
 public abstract class SettingsEntry<T> implements SharedPrefsUtils.Entry<T> {
 
-    private int mKeyResId;
-    private int mDefaultValueResId;
+    private final int mKeyResId;
+    private final int mDefaultValueResId;
 
-    public SettingsEntry(int keyResId, int defaultValueResId) {
+    public SettingsEntry(@StringRes int keyResId, int defaultValueResId) {
         mKeyResId = keyResId;
         mDefaultValueResId = defaultValueResId;
     }
 
+    @NonNull
     @Override
-    public String getKey(Context context) {
-        return context.getString(mKeyResId);
+    public String getKey() {
+        return DouyaApplication.getInstance().getString(mKeyResId);
     }
 
     protected int getDefaultValueResId() {
         return mDefaultValueResId;
     }
 
-    public abstract T getValue(Context context);
+    @Nullable
+    public abstract T getValue();
 
-    public abstract void putValue(T value, Context context);
+    public abstract void putValue(@Nullable T value);
 
-    public void remove(Context context) {
-        SharedPrefsUtils.remove(this, context);
+    public void remove() {
+        SharedPrefsUtils.remove(this);
     }
 }

@@ -10,35 +10,39 @@ import android.accounts.AccountManager;
 import android.accounts.AccountManagerCallback;
 import android.accounts.AccountManagerFuture;
 import android.accounts.AuthenticatorException;
+import android.accounts.OnAccountsUpdateListener;
 import android.accounts.OperationCanceledException;
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.TextUtils;
 
 import com.google.gson.JsonParseException;
-import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 
+import me.zhanghai.android.douya.DouyaApplication;
 import me.zhanghai.android.douya.account.app.AccountPreferences;
 import me.zhanghai.android.douya.account.info.AccountContract;
 import me.zhanghai.android.douya.account.ui.AddAccountActivity;
 import me.zhanghai.android.douya.account.ui.SelectAccountActivity;
-import me.zhanghai.android.douya.network.Volley;
-import me.zhanghai.android.douya.network.api.info.apiv2.UserInfo;
+import me.zhanghai.android.douya.network.api.ApiAuthenticators;
+import me.zhanghai.android.douya.network.api.info.apiv2.User;
 import me.zhanghai.android.douya.settings.info.Settings;
 import me.zhanghai.android.douya.util.GsonHelper;
 
 public class AccountUtils {
 
+    public static AccountManager getAccountManager() {
+        return AccountManager.get(DouyaApplication.getInstance());
+    }
+
     public static AccountManagerFuture<Bundle> addAccount(Activity activity,
                                                           AccountManagerCallback<Bundle> callback,
                                                           Handler handler) {
-        return AccountManager.get(activity).addAccount(AccountContract.ACCOUNT_TYPE,
-                AccountContract.AUTH_TOKEN_TYPE, null, null, activity, callback, handler);
+        return getAccountManager().addAccount(AccountContract.ACCOUNT_TYPE,
+                AccountContract.AUTH_TOKEN_TYPE_FRODO, null, null, activity, callback, handler);
     }
 
     public static AccountManagerFuture<Bundle> addAccount(Activity activity) {
@@ -46,30 +50,27 @@ public class AccountUtils {
     }
 
     public static void addAccount(Activity activity, Intent onAddedIntent) {
-        Intent intent = new Intent(activity, AddAccountActivity.class);
-        intent.putExtra(AddAccountActivity.EXTRA_ON_ADDED_INTENT, onAddedIntent);
-        activity.startActivity(intent);
+        activity.startActivity(AddAccountActivity.makeIntent(onAddedIntent, activity));
     }
 
-    public static boolean addAccountExplicitly(Account account, String password, Context context) {
-        return AccountManager.get(context).addAccountExplicitly(account, password, null);
+    public static boolean addAccountExplicitly(Account account, String password) {
+        return getAccountManager().addAccountExplicitly(account, password, null);
     }
 
     public static AccountManagerFuture<Bundle> updatePassword(Activity activity, Account account,
                                    AccountManagerCallback<Bundle> callback, Handler handler) {
-        return AccountManager.get(activity).updateCredentials(account,
-                AccountContract.AUTH_TOKEN_TYPE, null, activity, callback, handler);
+        return getAccountManager().updateCredentials(account, AccountContract.AUTH_TOKEN_TYPE_FRODO,
+                null, activity, callback, handler);
     }
 
     public static AccountManagerFuture<Bundle> updatePassword(Activity activity, Account account) {
         return updatePassword(activity, account, null, null);
     }
 
-    public static AccountManagerFuture<Bundle> confirmPassword(Activity activity, Account account,
-                                                               AccountManagerCallback<Bundle> callback,
-                                                               Handler handler) {
-        return AccountManager.get(activity).confirmCredentials(account, null, activity, callback,
-                handler);
+    public static AccountManagerFuture<Bundle> confirmPassword(
+            Activity activity, Account account, AccountManagerCallback<Bundle> callback,
+            Handler handler) {
+        return getAccountManager().confirmCredentials(account, null, activity, callback, handler);
     }
 
     public interface ConfirmPasswordListener {
@@ -77,42 +78,39 @@ public class AccountUtils {
         void onFailed();
     }
 
-    private static AccountManagerCallback<Bundle> makeAccountManagerCallback(
-            final ConfirmPasswordListener listener) {
-        return new AccountManagerCallback<Bundle>() {
-            @Override
-            public void run(AccountManagerFuture<Bundle> future) {
-                try {
-                    boolean confirmed = future.getResult()
-                            .getBoolean(AccountManager.KEY_BOOLEAN_RESULT);
-                    if (confirmed) {
-                        listener.onConfirmed();
-                    } else {
-                        listener.onFailed();
-                    }
-                } catch (AuthenticatorException | IOException | OperationCanceledException e) {
-                    e.printStackTrace();
+    private static AccountManagerCallback<Bundle> makeConfirmPasswordCallback(
+            ConfirmPasswordListener listener) {
+        return future -> {
+            try {
+                boolean confirmed = future.getResult()
+                        .getBoolean(AccountManager.KEY_BOOLEAN_RESULT);
+                if (confirmed) {
+                    listener.onConfirmed();
+                } else {
                     listener.onFailed();
                 }
+            } catch (AuthenticatorException | IOException | OperationCanceledException e) {
+                e.printStackTrace();
+                listener.onFailed();
             }
         };
     }
 
     public static void confirmPassword(Activity activity, Account account,
-                                       final ConfirmPasswordListener listener, Handler handler) {
-        confirmPassword(activity, account, makeAccountManagerCallback(listener), handler);
+                                       ConfirmPasswordListener listener, Handler handler) {
+        confirmPassword(activity, account, makeConfirmPasswordCallback(listener), handler);
     }
 
-    public static void confirmPassword(Activity activity, final ConfirmPasswordListener listener) {
-        confirmPassword(activity, getActiveAccount(activity), listener, null);
+    public static void confirmPassword(Activity activity, ConfirmPasswordListener listener) {
+        confirmPassword(activity, getActiveAccount(), listener, null);
     }
 
     // REMOVEME: This seems infeasible. And we should check against local password instead of using
     // network
     public static Intent makeConfirmPasswordIntent(Account account,
-                                                   final ConfirmPasswordListener listener) {
+                                                   ConfirmPasswordListener listener) {
         try {
-            return confirmPassword(null, account, makeAccountManagerCallback(listener), null)
+            return confirmPassword(null, account, makeConfirmPasswordCallback(listener), null)
                     .getResult().getParcelable(AccountManager.KEY_INTENT);
         } catch (AuthenticatorException | IOException | OperationCanceledException e) {
             e.printStackTrace();
@@ -120,79 +118,191 @@ public class AccountUtils {
         }
     }
 
-    public static Intent makeConfirmPasswordIntent(final ConfirmPasswordListener listener,
-                                                   Context context) {
-        return makeConfirmPasswordIntent(getActiveAccount(context), listener);
+    public static Intent makeConfirmPasswordIntent(ConfirmPasswordListener listener) {
+        return makeConfirmPasswordIntent(getActiveAccount(), listener);
     }
 
-    public static Account[] getAccounts(Context context) {
-        return AccountManager.get(context).getAccountsByType(AccountContract.ACCOUNT_TYPE);
+    public static void addOnAccountListUpdatedListener(OnAccountsUpdateListener listener) {
+        getAccountManager().addOnAccountsUpdatedListener(listener, null, false);
+    }
+
+    public static void removeOnAccountListUpdatedListener(OnAccountsUpdateListener listener) {
+        getAccountManager().removeOnAccountsUpdatedListener(listener);
+    }
+
+    public static Account[] getAccounts() {
+        return getAccountManager().getAccountsByType(AccountContract.ACCOUNT_TYPE);
+    }
+
+    private static Account getAccountByName(String accountName) {
+
+        if (TextUtils.isEmpty(accountName)) {
+            return null;
+        }
+
+        for (Account account : getAccounts()) {
+            if (TextUtils.equals(account.name, accountName)) {
+                return account;
+            }
+        }
+
+        return null;
     }
 
     // NOTE: This method is asynchronous.
-    public static void removeAccount(Account account, Context context) {
-        AccountManager.get(context).removeAccount(account, null, null);
+    public static void removeAccount(Account account) {
+        //noinspection deprecation
+        getAccountManager().removeAccount(account, null, null);
     }
 
-    public static boolean hasAccount(Context context) {
-        return getAccounts(context).length != 0;
+    public static boolean hasAccount() {
+        return getAccounts().length != 0;
     }
 
-    // NOTE: Use getActiveAccount().name instead for availability checking.
-    private static String getActiveAccountName(Context context) {
-        return Settings.ACTIVE_ACCOUNT_NAME.getValue(context);
+    // NOTE: Use getActiveAccount() instead for availability checking.
+    private static String getActiveAccountName() {
+        return Settings.ACTIVE_ACCOUNT_NAME.getValue();
     }
 
-    private static void setActiveAccountName(String accountName, Context context) {
-        Settings.ACTIVE_ACCOUNT_NAME.putValue(accountName, context);
+    private static void setActiveAccountName(String accountName) {
+        Settings.ACTIVE_ACCOUNT_NAME.putValue(accountName);
     }
 
-    private static void removeActiveAccountName(Context context) {
-        Settings.ACTIVE_ACCOUNT_NAME.remove(context);
+    private static void removeActiveAccountName() {
+        Settings.ACTIVE_ACCOUNT_NAME.remove();
     }
 
-    public static boolean hasActiveAccountName(Context context) {
-        return !TextUtils.isEmpty(getActiveAccountName(context));
+    public static boolean hasActiveAccountName() {
+        return !TextUtils.isEmpty(getActiveAccountName());
     }
 
-    public static boolean isActiveAccountName(String accountName, Context context) {
-        return TextUtils.equals(accountName, getActiveAccountName(context));
+    public static boolean isActiveAccountName(String accountName) {
+        return TextUtils.equals(accountName, getActiveAccountName());
     }
 
     // NOTICE:
     // Will clear the invalid setting and return null if no matching account with the name from
     // setting is found.
-    public static Account getActiveAccount(Context context) {
+    public static Account getActiveAccount() {
+        Account account = getAccountByName(getActiveAccountName());
+        if (account != null) {
+            return account;
+        } else {
+            removeActiveAccountName();
+            return null;
+        }
+    }
 
-        String activeAccountName = getActiveAccountName(context);
-        if (TextUtils.isEmpty(activeAccountName)) {
+    public static void setActiveAccount(Account account) {
+
+        if (account == null) {
+            removeActiveAccountName();
+            return;
+        }
+
+        Account oldActiveAccount = getActiveAccount();
+        setActiveAccountName(account.name);
+        if (oldActiveAccount != null) {
+            if (TextUtils.equals(getRecentOneAccountName(), account.name)) {
+                setRecentOneAccountName(oldActiveAccount.name);
+            } else if (TextUtils.equals(getRecentTwoAccountName(), account.name)) {
+                setRecentTwoAccountName(oldActiveAccount.name);
+            } else {
+                setRecentTwoAccountName(getRecentOneAccountName());
+                setRecentOneAccountName(oldActiveAccount.name);
+            }
+        }
+
+        ApiAuthenticators.getInstance().notifyActiveAccountChanged();
+    }
+
+    public static boolean hasActiveAccount() {
+        return getActiveAccount() != null;
+    }
+
+    public static boolean isActiveAccount(Account account) {
+        return isActiveAccountName(account.name);
+    }
+
+    private static String getRecentOneAccountName() {
+        return Settings.RECENT_ONE_ACCOUNT_NAME.getValue();
+    }
+
+    private static void setRecentOneAccountName(String accountName) {
+        Settings.RECENT_ONE_ACCOUNT_NAME.putValue(accountName);
+    }
+
+    private static void removeRecentOneAccountName() {
+        Settings.RECENT_ONE_ACCOUNT_NAME.remove();
+    }
+
+    public static Account getRecentOneAccount() {
+
+        Account activeAccount = getActiveAccount();
+        if (activeAccount == null) {
             return null;
         }
 
-        for (Account account : getAccounts(context)) {
-            if (TextUtils.equals(account.name, activeAccountName)) {
+        String accountName = getRecentOneAccountName();
+        if (!TextUtils.isEmpty(accountName) && !TextUtils.equals(accountName, activeAccount.name)) {
+            Account account = getAccountByName(accountName);
+            if (account != null) {
                 return account;
             }
         }
 
-        removeActiveAccountName(context);
+        for (Account account : getAccounts()) {
+            if (!account.equals(activeAccount)) {
+                setRecentOneAccountName(account.name);
+                return account;
+            }
+        }
+
+        removeRecentOneAccountName();
         return null;
     }
 
-    public static void setActiveAccount(Account account, Context context) {
-        setActiveAccountName(account.name, context);
-        Volley volley = Volley.peekInstance();
-        if (volley != null) {
-            volley.notifyActiveAccountChanged(context);
+    private static String getRecentTwoAccountName() {
+        return Settings.RECENT_TWO_ACCOUNT_NAME.getValue();
+    }
+
+    private static void setRecentTwoAccountName(String accountName) {
+        Settings.RECENT_TWO_ACCOUNT_NAME.putValue(accountName);
+    }
+
+    private static void removeRecentTwoAccountName() {
+        Settings.RECENT_TWO_ACCOUNT_NAME.remove();
+    }
+
+    public static Account getRecentTwoAccount() {
+
+        Account activeAccount = getActiveAccount();
+        if (activeAccount == null) {
+            return null;
         }
-    }
+        Account recentOneAccount = getRecentOneAccount();
+        if (recentOneAccount == null) {
+            return null;
+        }
 
-    public static boolean hasActiveAccount(Context context) {
-        return getActiveAccount(context) != null;
-    }
+        String accountName = getRecentTwoAccountName();
+        if (!TextUtils.isEmpty(accountName) && !TextUtils.equals(accountName, activeAccount.name)
+                && !TextUtils.equals(accountName, recentOneAccount.name)) {
+            Account account = getAccountByName(accountName);
+            if (account != null) {
+                return account;
+            }
+        }
 
-    public static boolean isActiveAccount(Account account, Context context) {
-        return isActiveAccountName(account.name, context);
+        for (Account account : getAccounts()) {
+            if (!account.equals(activeAccount) && !account.equals(recentOneAccount)) {
+                setRecentTwoAccountName(account.name);
+                return account;
+            }
+        }
+
+        removeRecentTwoAccountName();
+        return null;
     }
 
     // NOTICE: Be sure to check hasAccount() before calling this.
@@ -201,21 +311,19 @@ public class AccountUtils {
     // account should be handled in settings.
     public static void selectAccount(Activity activity, Intent onSelectedIntent) {
 
-        if (getAccounts(activity).length == 0) {
+        if (getAccounts().length == 0) {
             throw new IllegalStateException("Should have checked for hasAccount()");
         }
 
-        Intent intent = new Intent(activity, SelectAccountActivity.class);
-        intent.putExtra(SelectAccountActivity.EXTRA_ON_SELECTED_INTENT, onSelectedIntent);
-        activity.startActivity(intent);
+        activity.startActivity(SelectAccountActivity.makeIntent(onSelectedIntent, activity));
     }
 
-    public static boolean ensureAccountAvailability(Activity activity) {
+    public static boolean ensureActiveAccountAvailability(Activity activity) {
         boolean accountAvailable = true;
-        if (!hasAccount(activity)) {
+        if (!hasAccount()) {
             accountAvailable = false;
             addAccount(activity, activity.getIntent());
-        } else if (!hasActiveAccount(activity)) {
+        } else if (!hasActiveAccount()) {
             accountAvailable = false;
             selectAccount(activity, activity.getIntent());
         }
@@ -225,75 +333,118 @@ public class AccountUtils {
         return accountAvailable;
     }
 
-    public static String getPassword(Account account, Context context) {
-        return AccountManager.get(context).getPassword(account);
+    public static String getPassword(Account account) {
+        return getAccountManager().getPassword(account);
     }
 
-    public static void setPassword(Account account, String password, Context context) {
-        AccountManager.get(context).setPassword(account, password);
+    public static void setPassword(Account account, String password) {
+        getAccountManager().setPassword(account, password);
     }
 
-    public static String getAuthToken(Account account, Context context)
-            throws AuthenticatorException, OperationCanceledException, IOException {
-        return AccountManager.get(context).blockingGetAuthToken(account,
-                AccountContract.AUTH_TOKEN_TYPE, true);
+    public static String peekAuthToken(Account account, String type) {
+        return getAccountManager().peekAuthToken(account, type);
     }
 
-    public static void setAuthToken(Account account, String authToken, Context context) {
-        AccountManager.get(context).setAuthToken(account, AccountContract.AUTH_TOKEN_TYPE,
-                authToken);
+    public static void getAuthToken(Account account, String type,
+                                    AccountManagerCallback<Bundle> callback, Handler handler) {
+        getAccountManager().getAuthToken(account, type, null, true, callback, handler);
     }
 
-    public static void invalidateAuthToken(String authToken, Context context) {
-        AccountManager.get(context).invalidateAuthToken(AccountContract.ACCOUNT_TYPE, authToken);
+    public interface GetAuthTokenListener {
+        void onResult(String authToken);
+        void onFailed();
+    }
+
+    private static AccountManagerCallback<Bundle> makeGetAuthTokenCallback(
+            GetAuthTokenListener listener) {
+        return future -> {
+            try {
+                String authToken = future.getResult()
+                        .getString(AccountManager.KEY_AUTHTOKEN);
+                if (!TextUtils.isEmpty(authToken)) {
+                    listener.onResult(authToken);
+                } else {
+                    listener.onFailed();
+                }
+            } catch (AuthenticatorException | IOException | OperationCanceledException e) {
+                e.printStackTrace();
+                listener.onFailed();
+            }
+        };
+    }
+
+    public static void getAuthToken(Account account, String type, GetAuthTokenListener listener,
+                                    Handler handler) {
+        getAuthToken(account, type, makeGetAuthTokenCallback(listener), handler);
+    }
+
+    public static void getAuthToken(Account account, String type, GetAuthTokenListener listener) {
+        getAuthToken(account, type, listener, null);
+    }
+
+    public static void setAuthToken(Account account, String type, String authToken) {
+        getAccountManager().setAuthToken(account, type, authToken);
+    }
+
+    public static void invalidateAuthToken(String authToken) {
+        getAccountManager().invalidateAuthToken(AccountContract.ACCOUNT_TYPE, authToken);
     }
 
     // User name is different from username: user name is the display name in User.name, but
     // username is the account name for logging in.
-    public static String getUserName(Account account, Context context) {
-        return AccountPreferences.from(account, context).getString(AccountContract.KEY_USER_NAME,
+    public static String getUserName(Account account) {
+        return AccountPreferences.forAccount(account).getString(AccountContract.KEY_USER_NAME,
                 null);
     }
 
-    public static String getUserName(Context context) {
-        return getUserName(getActiveAccount(context), context);
+    public static String getUserName() {
+        return getUserName(getActiveAccount());
     }
 
-    public static void setUserName(Account account, String userName, Context context) {
-        AccountPreferences.from(account, context).putString(AccountContract.KEY_USER_NAME,
-                userName);
+    public static void setUserName(Account account, String userName) {
+        AccountPreferences.forAccount(account).putString(AccountContract.KEY_USER_NAME, userName);
     }
 
-    public static long getUserId(Account account, Context context) {
-        return AccountPreferences.from(account, context).getLong(AccountContract.KEY_USER_ID,
+    public static long getUserId(Account account) {
+        return AccountPreferences.forAccount(account).getLong(AccountContract.KEY_USER_ID,
                 AccountContract.INVALID_USER_ID);
     }
 
-    public static long getUserId(Context context) {
-        return getUserId(getActiveAccount(context), context);
+    public static long getUserId() {
+        return getUserId(getActiveAccount());
     }
 
-    public static void setUserId(Account account, long userId, Context context) {
-        AccountPreferences.from(account, context).putLong(AccountContract.KEY_USER_ID, userId);
+    public static void setUserId(Account account, long userId) {
+        AccountPreferences.forAccount(account).putLong(AccountContract.KEY_USER_ID, userId);
     }
 
-    public static String getRefreshToken(Account account, Context context) {
-        return AccountPreferences.from(account, context).getString(
-                AccountContract.KEY_REFRESH_TOKEN, null);
+    public static String getRefreshToken(Account account, String authTokenType) {
+        return AccountPreferences.forAccount(account).getString(getRefreshTokenKey(authTokenType),
+                null);
     }
 
-    public static void setRefreshToken(Account account, String refreshToken, Context context) {
-        AccountPreferences.from(account, context).putString(AccountContract.KEY_REFRESH_TOKEN,
+    public static void setRefreshToken(Account account, String authTokenType, String refreshToken) {
+        AccountPreferences.forAccount(account).putString(getRefreshTokenKey(authTokenType),
                 refreshToken);
     }
 
-    public static UserInfo getUserInfo(Account account, Context context) {
-        String userInfoJson = AccountPreferences.from(account, context)
-                .getString(AccountContract.KEY_USER_INFO, null);
+    private static String getRefreshTokenKey(String authTokenType) {
+        switch (authTokenType) {
+            case AccountContract.AUTH_TOKEN_TYPE_API_V2:
+                return AccountContract.KEY_REFRESH_TOKEN_API_V2;
+            case AccountContract.AUTH_TOKEN_TYPE_FRODO:
+                return AccountContract.KEY_REFRESH_TOKEN_FRODO;
+            default:
+                throw new IllegalArgumentException("Unknown authTokenType: " + authTokenType);
+        }
+    }
+
+    public static User getUser(Account account) {
+        String userInfoJson = AccountPreferences.forAccount(account).getString(
+                AccountContract.KEY_USER_INFO, null);
         if (!TextUtils.isEmpty(userInfoJson)) {
             try {
-                return GsonHelper.get().fromJson(userInfoJson,
-                        new TypeToken<UserInfo>() {}.getType());
+                return GsonHelper.GSON.fromJson(userInfoJson, User.class);
             } catch (JsonParseException e) {
                 e.printStackTrace();
             }
@@ -301,19 +452,17 @@ public class AccountUtils {
         return null;
     }
 
-    public static void setUserInfo(Account account, UserInfo userInfo, Context context) {
-        String userInfoJson = GsonHelper.get().toJson(userInfo,
-                new TypeToken<UserInfo>() {}.getType());
-        AccountPreferences.from(account, context).putString(AccountContract.KEY_USER_INFO,
+    public static void setUser(Account account, User user) {
+        String userInfoJson = GsonHelper.GSON.toJson(user, User.class);
+        AccountPreferences.forAccount(account).putString(AccountContract.KEY_USER_INFO,
                 userInfoJson);
     }
 
-
-    public static UserInfo getUserInfo(Context context) {
-        return getUserInfo(getActiveAccount(context), context);
+    public static User getUser() {
+        return getUser(getActiveAccount());
     }
 
-    public static void setUserInfo(UserInfo userInfo, Context context) {
-        setUserInfo(getActiveAccount(context), userInfo, context);
+    public static void setUser(User user) {
+        setUser(getActiveAccount(), user);
     }
 }

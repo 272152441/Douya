@@ -7,7 +7,6 @@ package me.zhanghai.android.douya.profile.ui;
 
 import android.content.Context;
 import android.util.AttributeSet;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -21,7 +20,7 @@ import me.zhanghai.android.douya.R;
 import me.zhanghai.android.douya.followship.ui.FollowerListActivity;
 import me.zhanghai.android.douya.followship.ui.FollowingListActivity;
 import me.zhanghai.android.douya.network.api.info.apiv2.User;
-import me.zhanghai.android.douya.network.api.info.apiv2.UserInfo;
+import me.zhanghai.android.douya.network.api.info.frodo.SimpleUser;
 import me.zhanghai.android.douya.ui.FriendlyCardView;
 import me.zhanghai.android.douya.util.ImageUtils;
 import me.zhanghai.android.douya.util.ViewUtils;
@@ -60,11 +59,11 @@ public class ProfileFollowshipLayout extends FriendlyCardView {
     }
 
     private void init() {
-        inflate(getContext(), R.layout.profile_followship_layout, this);
+        ViewUtils.inflateInto(R.layout.profile_followship_layout, this);
         ButterKnife.bind(this);
     }
 
-    public void bind(final UserInfo userInfo, List<User> followingList) {
+    public void bind(final User userInfo, List<SimpleUser> followingList) {
 
         final Context context = getContext();
         OnClickListener viewFollowingListListener = new OnClickListener() {
@@ -78,15 +77,14 @@ public class ProfileFollowshipLayout extends FriendlyCardView {
         mViewMoreText.setOnClickListener(viewFollowingListListener);
 
         int i = 0;
-        for (final User user : followingList) {
+        for (final SimpleUser user : followingList) {
 
             if (i >= USER_COUNT_MAX) {
                 break;
             }
 
             if (i >= mFollowingList.getChildCount()) {
-                LayoutInflater.from(context)
-                        .inflate(R.layout.profile_user_item, mFollowingList);
+                ViewUtils.inflateInto(R.layout.profile_user_item, mFollowingList);
             }
             View userLayout = mFollowingList.getChildAt(i);
             UserLayoutHolder holder = (UserLayoutHolder) userLayout.getTag();
@@ -95,14 +93,10 @@ public class ProfileFollowshipLayout extends FriendlyCardView {
                 userLayout.setTag(holder);
             }
 
-            ImageUtils.loadAvatar(holder.avatarImage, user.avatar, context);
+            ImageUtils.loadAvatar(holder.avatarImage, user.avatar);
             holder.nameText.setText(user.name);
-            userLayout.setOnClickListener(new OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    context.startActivity(ProfileActivity.makeIntent(user, context));
-                }
-            });
+            userLayout.setOnClickListener(view -> context.startActivity(ProfileActivity.makeIntent(
+                    user, context)));
 
             ++i;
         }

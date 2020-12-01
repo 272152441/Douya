@@ -7,98 +7,71 @@ package me.zhanghai.android.douya.network.api;
 
 import android.os.Build;
 
-import com.android.volley.DefaultRetryPolicy;
+import java.util.Arrays;
+import java.util.List;
+
+import me.zhanghai.android.douya.network.Http;
 
 public interface ApiContract {
 
     interface Request {
 
-        interface Token {
+        interface Authentication {
 
-            String URL = "https://www.douban.com/service/auth2/token";
+            interface BaseUrls {
+                String API_V2 = "https://www.douban.com/";
+                String FRODO = "https://frodo.douban.com/";
+            }
+            String URL = "service/auth2/token";
 
-            String CLIENT_ID = "client_id";
-            String CLIENT_SECRET = "client_secret";
-            String REDIRECT_URI = "redirect_uri";
+            String ACCEPT_CHARSET = Http.Charsets.UTF8;
             interface RedirectUris {
+                String API_V2 = "http://shuo.douban.com/!service/android";
                 String FRODO = "frodo://app/oauth/callback/";
             }
-            String GRANT_TYPE = "grant_type";
             interface GrantTypes {
                 String PASSWORD = "password";
                 String REFRESH_TOKEN = "refresh_token";
             }
-            String USERNAME = "username";
-            String PASSWORD = "password";
-            String REFRESH_TOKEN = "refresh_token";
         }
 
         interface Base {
-            int INITIAL_TIMEOUT_MS = 10000;
             int MAX_NUM_RETRIES = 2;
-            float BACKOFF_MULTIPLIER = DefaultRetryPolicy.DEFAULT_BACKOFF_MULT;
         }
 
         interface Frodo {
 
+            String BASE_URL = "https://frodo.douban.com/api/v2/";
+
             // API protocol version is derived from user agent string.
-            String USER_AGENT = "api-client/Volley/1 com.douban.frodo/4.0.0(66) Android/"
-                    + Build.VERSION.SDK_INT+ " " + Build.PRODUCT + " " + Build.MANUFACTURER + " "
-                    + Build.MODEL + "  rom:android";
+            String USER_AGENT = "api-client/1 com.douban.frodo/6.0.1(138) Android/" +
+                    Build.VERSION.SDK_INT+ " product/" + Build.PRODUCT + " vendor/" +
+                    // Sorry Frodo, but we don't want to hold ACCESS_NETWORK_STATE.
+                    Build.MANUFACTURER + " model/" + Build.MODEL + "  rom/android  network/wifi";
 
-            String API_HOST = "https://frodo.douban.com/api/v2/";
-
-            interface Base {
-                String API_KEY = "apiKey";
-                String UDID = "udid";
-                String DEVICE_ID = "device_id";
-                String CHANNEL = "channel";
-                interface Channels {
-                    String DOUBAN = "Douban";
-                }
-                String OS_ROM = "os_rom";
+            String API_KEY = "apikey";
+            String CHANNEL = "channel";
+            interface Channels {
+                String DOUBAN = "Douban";
+            }
+            String UDID = "udid";
+            String OS_ROM = "os_rom";
+            interface OsRoms {
+                String ANDROID = "android";
             }
 
-            interface NotificationList {
-
-                String URL = API_HOST + "mine/notifications";
-
-                String START = "start";
-                String COUNT = "count";
-            }
-
-            interface UserDiaryList {
-
-                String URL_FORMAT = API_HOST + "user/%s/notes";
-
-                String START = "start";
-                String COUNT = "count";
-            }
-
-            interface UserItemList {
-                String URL_FORMAT = API_HOST + "user/%s/itemlist";
-            }
-
-            interface UserReviewList {
-
-                String URL_FORMAT = API_HOST + "user/%s/reviews";
-
-                String START = "start";
-                String COUNT = "count";
-            }
-
-            interface ItemReviewList {
-
-                String URL_FORMAT = API_HOST + "subject/%d/reviews";
-
-                String START = "start";
-                String COUNT = "count";
-            }
+            List<String> SIGNATURE_HOSTS = Arrays.asList("frodo.douban.com", "api.douban.com");
+            String SIG = "_sig";
+            String TS = "_ts";
         }
 
         interface ApiV2 {
 
-            String API_HOST = "https://api.douban.com/v2/";
+            String BASE_URL = "https://api.douban.com/v2/";
+
+            String USER_AGENT = "api-client/2.0 com.douban.shuo/2.2.7(123) Android/" +
+                    Build.VERSION.SDK_INT + " " + Build.PRODUCT + " " + Build.MANUFACTURER + " " +
+                    Build.MODEL;
 
             interface Base {
                 String API_KEY = "apikey";
@@ -110,100 +83,6 @@ public interface ApiContract {
                 interface Versions {
                     int TWO = 2;
                 }
-            }
-
-            interface UserInfo {
-
-                String URL_FORMAT = API_HOST + "lifestream/user/%s";
-
-                String UID_CURRENT = "~me";
-            }
-
-            interface Followship {
-                String URL_FORMAT = API_HOST + "lifestream/user/%s/follow";
-            }
-
-            interface FollowingList {
-
-                String URL_FORMAT = API_HOST + "lifestream/user/%s/followings";
-
-                String COUNT = "count";
-                String START = "start";
-                String TAG = "tag";
-            }
-
-            interface FollowerList {
-
-                String URL_FORMAT = API_HOST + "lifestream/user/%s/followers";
-
-                String COUNT = "count";
-                String START = "start";
-            }
-
-            interface BroadcastList {
-
-                interface Urls {
-                    String HOME = API_HOST + "lifestream/home_timeline";
-                    String USER_FORMAT = API_HOST + "lifestream/user_timeline/%s";
-                    String TOPIC = API_HOST + "lifestream/topics";
-                }
-
-                String SINCE_ID = "since_id";
-                String UNTIL_ID = "until_id";
-                String COUNT = "count";
-                String START = "start";
-                String Q = "q";
-            }
-
-            interface Broadcast {
-                String URL_FORMAT = API_HOST + "lifestream/status/%d";
-            }
-
-            interface LikeBroadcast {
-                String URL_FORMAT = API_HOST + "lifestream/status/%d/like";
-            }
-
-            interface RebroadcastBroadcast {
-                String URL_FORMAT = API_HOST + "lifestream/status/%d/reshare";
-            }
-
-            interface BroadcastCommentList {
-
-                String URL_FORMAT = API_HOST + "lifestream/status/%d/comments";
-
-                String COUNT = "count";
-                String START = "start";
-            }
-
-            interface BroadcastLikerList {
-
-                String URL_FORMAT = API_HOST + "lifestream/status/%d/likers";
-
-                String COUNT = "count";
-                String START = "start";
-            }
-
-            interface BroadcastRebroadcasterList {
-
-                String URL_FORMAT = API_HOST + "lifestream/status/%d/resharers";
-
-                String COUNT = "count";
-                String START = "start";
-            }
-
-            interface DeleteBroadcastComment {
-                String URL_FORMAT = API_HOST + "lifestream/status/%d/comment/%d";
-            }
-
-            interface SendBroadcastComment {
-
-                String URL_FORMAT = API_HOST + "lifestream/status/%d/comments";
-
-                String TEXT = "text";
-            }
-
-            interface DeleteBroadcast {
-                String URL_FORMAT = API_HOST + "lifestream/status/%d";
             }
         }
     }
@@ -217,6 +96,7 @@ public interface ApiContract {
                     int INVALID_ERROR_RESPONSE = -1;
                 }
                 interface Base {
+                    int INVALID_REQUEST_997 = 997;
                     int UNKNOWN_V2_ERROR = 999;
                     int NEED_PERMISSION = 1000;
                     int URI_NOT_FOUND = 1001;
@@ -269,29 +149,15 @@ public interface ApiContract {
                     int NOT_FOLLOWED_YET = 10005;
                 }
                 interface Broadcast {
-                    int NOT_FOUND = 11110;
-                    int AUTHOR_BANNED = 11111;
-                }
-                interface LikeBroadcast {
-                    int ALREADY_LIKED = 11107;
-                    int NOT_LIKED_YET = 11108;
+                    int NOT_FOUND = 1212;
                 }
                 interface RebroadcastBroadcast {
-                    int ALREADY_REBROADCASTED = 11104;
-                    int NOT_REBROADCASTED_YET = 11105;
+                    int REBROADCASTED_BROADCAST_DELETED = 1265;
                 }
             }
             String MSG = "msg";
             String REQUEST = "request";
             String LOCALIZED_MESSAGE = "localized_message";
-        }
-
-        interface Token {
-            String DOUBAN_UESR_NAME = "douban_user_name";
-            String DOUBAN_USER_ID = "douban_user_id";
-            String ACCESS_TOKEN = "access_token";
-            String REFRESH_TOKEN = "refresh_token";
-            String EXPIRES_IN = "expires_in";
         }
     }
 }

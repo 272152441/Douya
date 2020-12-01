@@ -5,14 +5,16 @@
 
 package me.zhanghai.android.douya.ui;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
-import android.content.res.TypedArray;
 import android.os.Build;
-import android.support.annotation.IntDef;
+import androidx.annotation.IntDef;
+import androidx.appcompat.widget.TintTypedArray;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import java.lang.annotation.Retention;
@@ -47,19 +49,19 @@ public class ContentStateLayout extends FrameLayout {
     public ContentStateLayout(Context context) {
         super(context);
 
-        init(getContext(), null, 0, 0);
+        init(null, 0, 0);
     }
 
     public ContentStateLayout(Context context, AttributeSet attrs) {
         super(context, attrs);
 
-        init(getContext(), attrs, 0, 0);
+        init(attrs, 0, 0);
     }
 
     public ContentStateLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
 
-        init(getContext(), attrs, defStyleAttr, 0);
+        init(attrs, defStyleAttr, 0);
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
@@ -67,11 +69,12 @@ public class ContentStateLayout extends FrameLayout {
                               int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
 
-        init(getContext(), attrs, defStyleAttr, defStyleRes);
+        init(attrs, defStyleAttr, defStyleRes);
     }
 
-    private void init(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
-        TypedArray a = context.obtainStyledAttributes(attrs,
+    @SuppressLint("RestrictedApi")
+    private void init(AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+        TintTypedArray a = TintTypedArray.obtainStyledAttributes(getContext(), attrs,
                 R.styleable.ContentStateLayout, defStyleAttr, defStyleRes);
         mLoadingViewId = a.getResourceId(R.styleable.ContentStateLayout_loadingView, R.id.loading);
         mContentViewId = a.getResourceId(R.styleable.ContentStateLayout_contentView, R.id.content);
@@ -92,8 +95,18 @@ public class ContentStateLayout extends FrameLayout {
 
         if (mLoadingView == null) {
             mLoadingView = LayoutInflater.from(getContext())
-                    .inflate(R.layout.content_layout_default_loading_view, this, false);
+                    .inflate(R.layout.content_state_layout_default_loading_view, this, false);
             addView(mLoadingView);
+        }
+        if (mEmptyView == null) {
+            mEmptyView = LayoutInflater.from(getContext())
+                    .inflate(R.layout.content_state_layout_default_empty_view, this, false);
+            addView(mEmptyView);
+        }
+        if (mErrorView == null) {
+            mErrorView = LayoutInflater.from(getContext())
+                    .inflate(R.layout.content_state_layout_default_error_view, this, false);
+            addView(mErrorView);
         }
 
         setViewVisible(mLoadingView, false, false);
@@ -103,10 +116,22 @@ public class ContentStateLayout extends FrameLayout {
     }
 
     private View findChildById(int id) {
-        for (int i = 0, count = getChildCount(); i < count; ++i) {
-            View child = getChildAt(i);
-            if (child.getId() == id) {
+        return findChildById(this, id);
+    }
+
+    private View findChildById(ViewGroup viewGroup, int id) {
+        for (int i = 0, count = viewGroup.getChildCount(); i < count; ++i) {
+            View child = viewGroup.getChildAt(i);
+            int childId = child.getId();
+            if (childId == id) {
                 return child;
+            } else if (child instanceof ViewGroup && childId != mLoadingViewId
+                    && childId != mContentViewId && childId != mEmptyViewId
+                    && childId != mErrorViewId) {
+                child = findChildById((ViewGroup) child, id);
+                if (child != null) {
+                    return child;
+                }
             }
         }
         return null;

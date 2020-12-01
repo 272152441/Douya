@@ -5,11 +5,12 @@
 
 package me.zhanghai.android.douya.settings.ui;
 
+import android.app.Activity;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -25,6 +26,7 @@ import me.zhanghai.android.douya.R;
 import me.zhanghai.android.douya.profile.ui.ProfileActivity;
 import me.zhanghai.android.douya.scalpel.ScalpelHelperFragment;
 import me.zhanghai.android.douya.ui.KonamiCodeDetector;
+import me.zhanghai.android.douya.util.AppUtils;
 
 public class AboutFragment extends Fragment implements ConfirmEnableScalpelDialogFragment.Listener {
 
@@ -72,9 +74,9 @@ public class AboutFragment extends Fragment implements ConfirmEnableScalpelDialo
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
-        ScalpelHelperFragment.attachTo(this);
+        ScalpelHelperFragment.attachToActivity(this);
 
-        final AppCompatActivity activity = (AppCompatActivity) getActivity();
+        AppCompatActivity activity = (AppCompatActivity) getActivity();
         activity.setSupportActionBar(mToolbar);
         activity.getSupportActionBar().setTitle(null);
 
@@ -91,6 +93,7 @@ public class AboutFragment extends Fragment implements ConfirmEnableScalpelDialo
         mDoubanButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                Activity activity = getActivity();
                 activity.startActivity(ProfileActivity.makeIntent("douban-douya", activity));
             }
         });
@@ -100,7 +103,7 @@ public class AboutFragment extends Fragment implements ConfirmEnableScalpelDialo
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case android.R.id.home:
-                getActivity().finish();
+                AppUtils.navigateUp(getActivity());
                 return true;
             default:
                 return super.onOptionsItemSelected(item);

@@ -6,12 +6,13 @@
 package me.zhanghai.android.douya.broadcast.ui;
 
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.appcompat.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,13 +20,17 @@ import android.view.ViewGroup;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import me.zhanghai.android.douya.R;
-import me.zhanghai.android.douya.network.api.info.apiv2.User;
-import me.zhanghai.android.douya.ui.AppBarManager;
+import me.zhanghai.android.douya.network.api.info.apiv2.SimpleUser;
+import me.zhanghai.android.douya.ui.AppBarHost;
 import me.zhanghai.android.douya.ui.AppBarWrapperLayout;
+import me.zhanghai.android.douya.ui.DoubleClickToolbar;
+import me.zhanghai.android.douya.ui.WebViewActivity;
+import me.zhanghai.android.douya.util.DoubanUtils;
 import me.zhanghai.android.douya.util.FragmentUtils;
+import me.zhanghai.android.douya.util.ShareUtils;
 import me.zhanghai.android.douya.util.TransitionUtils;
 
-public class BroadcastListActivityFragment extends Fragment implements AppBarManager {
+public class BroadcastListActivityFragment extends Fragment implements AppBarHost {
 
     private static final String KEY_PREFIX = BroadcastListActivityFragment.class.getName() + '.';
 
@@ -36,25 +41,25 @@ public class BroadcastListActivityFragment extends Fragment implements AppBarMan
     @BindView(R.id.appBarWrapper)
     AppBarWrapperLayout mAppBarWrapperLayout;
     @BindView(R.id.toolbar)
-    Toolbar mToolbar;
+    DoubleClickToolbar mToolbar;
 
     private String mUserIdOrUid;
-    private User mUser;
+    private SimpleUser mUser;
     private String mTopic;
 
-    public static BroadcastListActivityFragment newInstance(String userIdOrUid, User user,
+    public static BroadcastListActivityFragment newInstance(String userIdOrUid, SimpleUser user,
                                                             String topic) {
         //noinspection deprecation
         BroadcastListActivityFragment fragment = new BroadcastListActivityFragment();
-        Bundle arguments = FragmentUtils.ensureArguments(fragment);
-        arguments.putString(EXTRA_USER_ID_OR_UID, userIdOrUid);
-        arguments.putParcelable(EXTRA_USER, user);
-        arguments.putString(EXTRA_TOPIC, topic);
+        FragmentUtils.getArgumentsBuilder(fragment)
+                .putString(EXTRA_USER_ID_OR_UID, userIdOrUid)
+                .putParcelable(EXTRA_USER, user)
+                .putString(EXTRA_TOPIC, topic);
         return fragment;
     }
 
     /**
-     * @deprecated Use {@link #newInstance(String, User, String)} instead.
+     * @deprecated Use {@link #newInstance(String, SimpleUser, String)} instead.
      */
     public BroadcastListActivityFragment() {}
 
@@ -105,14 +110,42 @@ public class BroadcastListActivityFragment extends Fragment implements AppBarMan
     }
 
     @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+
+        inflater.inflate(R.menu.broadcast_list, menu);
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case android.R.id.home:
                 getActivity().finish();
                 return true;
+            case R.id.action_share:
+                share();
+                return true;
+            case R.id.action_view_on_web:
+                viewOnWeb();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    @Override
+    public void showAppBar() {
+        mAppBarWrapperLayout.show();
+    }
+
+    @Override
+    public void hideAppBar() {
+        mAppBarWrapperLayout.hide();
+    }
+
+    @Override
+    public void setToolBarOnDoubleClickListener(DoubleClickToolbar.OnDoubleClickListener listener) {
+        mToolbar.setOnDoubleClickListener(listener);
     }
 
     private String getTitle() {
@@ -126,13 +159,17 @@ public class BroadcastListActivityFragment extends Fragment implements AppBarMan
         }
     }
 
-    @Override
-    public void showAppBar() {
-        mAppBarWrapperLayout.show();
+    private void share() {
+        ShareUtils.shareText(makeUrl(), getActivity());
     }
 
-    @Override
-    public void hideAppBar() {
-        mAppBarWrapperLayout.hide();
+    private void viewOnWeb() {
+        startActivity(WebViewActivity.makeIntent(makeUrl(), true, getActivity()));
+    }
+
+    private String makeUrl() {
+        //noinspection deprecation
+        return DoubanUtils.makeBroadcastListUrl(mUser != null ? mUser.getUidOrId() : mUserIdOrUid,
+                mTopic);
     }
 }

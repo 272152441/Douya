@@ -1,45 +1,31 @@
 /*
- * Copyright (c) 2016 Zhang Hai <Dreaming.in.Code.ZH@Gmail.com>
+ * Copyright (c) 2018 Zhang Hai <Dreaming.in.Code.ZH@Gmail.com>
  * All Rights Reserved.
  */
 
 package me.zhanghai.android.douya.content;
 
+import android.app.Service;
 import android.content.Context;
 
-import com.android.volley.Response;
+public abstract class ResourceWriter<W extends ResourceWriter> {
 
-import me.zhanghai.android.douya.network.Request;
-import me.zhanghai.android.douya.network.Volley;
-
-public abstract class ResourceWriter<W extends ResourceWriter, T>
-        implements Response.Listener<T>, Response.ErrorListener {
-
-    private ResourceWriterManager<W> mManager;
-
-    private Request<T> mRequest;
+    protected ResourceWriterManager<W> mManager;
 
     public ResourceWriter(ResourceWriterManager<W> manager) {
         mManager = manager;
     }
 
-    public void onStart() {
-        mRequest = onCreateRequest();
-        mRequest.setListener(this);
-        mRequest.setErrorListener(this);
-        Volley.getInstance(getContext()).addToRequestQueue(mRequest);
-    }
+    public abstract void onStart();
 
-    protected abstract Request<T> onCreateRequest();
-
-    public void onDestroy() {
-        mRequest.cancel();
-        mRequest.setListener(null);
-        mRequest.setErrorListener(null);
-    }
+    public abstract void onDestroy();
 
     protected Context getContext() {
         return mManager.getContext();
+    }
+
+    protected Service getService() {
+        return mManager.getService();
     }
 
     protected void stopSelf() {

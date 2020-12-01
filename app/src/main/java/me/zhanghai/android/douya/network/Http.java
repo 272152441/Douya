@@ -7,18 +7,41 @@ package me.zhanghai.android.douya.network;
 
 public class Http {
 
+    public interface Methods {
+        String GET = "GET";
+        String HEAD = "HEAD";
+        String POST = "POST";
+        String PUT = "PUT";
+        String DELETE = "DELETE";
+        String CONNECT = "CONNECT";
+        String OPTIONS = "OPTIONS";
+        String TRACE = "TRACE";
+        String PATCH = "PATCH";
+    }
+
     public static class Headers {
         public static final String ACCEPT = "Accept";
         public static final String ACCEPT_CHARSET = "Accept-Charset";
         public static final String ACCEPT_ENCODING = "Accept-Encoding";
         public static final String ACCEPT_VERSION = "X-Accept-Version";
         public static final String AUTHORIZATION = "Authorization";
+        private static final String BEARER_PREFIX = "Bearer ";
         public static String makeBearerAuthorization(String token) {
-            return "Bearer " + token;
+            return BEARER_PREFIX + token;
         }
+        public static String getTokenFromBearerAuthorization(String bearerAuthorization) {
+            int bearerPrefixLength = BEARER_PREFIX.length();
+            if (bearerAuthorization == null || bearerAuthorization.length() < bearerPrefixLength) {
+                return null;
+            } else {
+                return bearerAuthorization.substring(bearerPrefixLength);
+            }
+        }
+        public static final String CONTENT_DISPOSITION = "Content-Disposition";
         public static final String CONTENT_ENCODING = "Content-Encoding";
         public static final String CONTENT_LENGTH = "Content-Length";
         public static final String CONTENT_TYPE = "Content-Type";
+        public static final String Cookie = "Cookie";
         public static final String REFERER = "Referer";
         public static final String USER_AGENT = "User-Agent";
     }

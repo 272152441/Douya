@@ -6,32 +6,26 @@
 package me.zhanghai.android.douya.broadcast.ui;
 
 import android.content.Context;
-import android.support.v4.view.ViewCompat;
-import android.support.v7.widget.CardView;
-import android.support.v7.widget.RecyclerView;
+import androidx.core.view.ViewCompat;
+import androidx.cardview.widget.CardView;
+import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import java.util.List;
-
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import me.zhanghai.android.douya.R;
-import me.zhanghai.android.douya.network.api.info.apiv2.Broadcast;
+import me.zhanghai.android.douya.network.api.info.frodo.Broadcast;
 import me.zhanghai.android.douya.ui.SimpleAdapter;
-import me.zhanghai.android.douya.util.RecyclerViewUtils;
 import me.zhanghai.android.douya.util.ViewUtils;
 
 public class BroadcastAdapter extends SimpleAdapter<Broadcast, BroadcastAdapter.ViewHolder> {
 
     private Listener mListener;
 
-    public BroadcastAdapter(List<Broadcast> broadcastList, Listener listener) {
-        super(broadcastList);
-
+    public BroadcastAdapter(Listener listener) {
         mListener = listener;
-
         setHasStableIds(true);
     }
 
@@ -47,26 +41,22 @@ public class BroadcastAdapter extends SimpleAdapter<Broadcast, BroadcastAdapter.
 
     @Override
     public void onBindViewHolder(final ViewHolder holder, int position) {
-        Broadcast originalBroadcast = getItem(position);
-        holder.rebroadcastedByText.setText(originalBroadcast.getRebroadcastedBy(
-                RecyclerViewUtils.getContext(holder)));
-        final Broadcast broadcast = originalBroadcast.rebroadcastedBroadcast != null ?
-                originalBroadcast.rebroadcastedBroadcast : originalBroadcast;
-        holder.cardView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mListener.onOpenBroadcast(broadcast, getSharedView(holder));
-            }
-        });
-        holder.broadcastLayout.bindBroadcast(broadcast);
+        Broadcast broadcast = getItem(position);
+        holder.rebroadcastedByText.setText(broadcast.isSimpleRebroadcast() ?
+                broadcast.getRebroadcastedBy(holder.rebroadcastedByText.getContext()) : null);
+        Broadcast effectiveBroadcast = broadcast.getEffectiveBroadcast();
+        holder.cardView.setOnClickListener(view -> mListener.onOpenBroadcast(broadcast,
+                getSharedView(holder)));
+        holder.broadcastLayout.bind(broadcast);
         holder.broadcastLayout.setListener(new BroadcastLayout.Listener() {
             @Override
             public void onLikeClicked() {
-                mListener.onLikeBroadcast(broadcast, !broadcast.isLiked);
+                mListener.onLikeBroadcast(effectiveBroadcast, !effectiveBroadcast.isLiked);
             }
             @Override
-            public void onRebroadcastClicked() {
-                mListener.onRebroadcastBroadcast(broadcast, !broadcast.isRebroadcasted());
+            public void onRebroadcastClicked(boolean isLongClick) {
+                mListener.onRebroadcastBroadcast(broadcast,
+                        !broadcast.isSimpleRebroadcastByOneself(), isLongClick);
             }
             @Override
             public void onCommentClicked() {
@@ -87,12 +77,12 @@ public class BroadcastAdapter extends SimpleAdapter<Broadcast, BroadcastAdapter.
 
     @Override
     public void onViewRecycled(ViewHolder holder) {
-        holder.broadcastLayout.releaseBroadcast();
+        holder.broadcastLayout.unbind();
     }
 
     public interface Listener {
         void onLikeBroadcast(Broadcast broadcast, boolean like);
-        void onRebroadcastBroadcast(Broadcast broadcast, boolean rebroadcast);
+        void onRebroadcastBroadcast(Broadcast broadcast, boolean rebroadcast, boolean quick);
         void onCommentBroadcast(Broadcast broadcast, View sharedView);
         void onOpenBroadcast(Broadcast broadcast, View sharedView);
     }

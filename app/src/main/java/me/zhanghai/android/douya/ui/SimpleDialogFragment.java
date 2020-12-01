@@ -10,12 +10,12 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.FragmentManager;
-import android.support.v7.app.AlertDialog;
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.fragment.app.FragmentManager;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatDialogFragment;
 import android.util.TypedValue;
 import android.view.KeyEvent;
 
@@ -23,7 +23,7 @@ import me.zhanghai.android.douya.R;
 import me.zhanghai.android.douya.util.FragmentUtils;
 
 @SuppressWarnings("unused")
-public class SimpleDialogFragment extends DialogFragment {
+public class SimpleDialogFragment extends AppCompatDialogFragment {
 
     private static final String ARGUMENT_REQUEST_CODE = "request_code";
     private static final String ARGUMENT_THEME = "theme";
@@ -41,7 +41,7 @@ public class SimpleDialogFragment extends DialogFragment {
 
     public static final int REQUEST_CODE_INVALID = -1;
 
-    private SimpleDialogListener mListener;
+    private Listener mListener;
     private int mRequestCode;
 
     private static SimpleDialogFragment makeClose(int requestCode, Integer titleId, int messageId,
@@ -178,12 +178,12 @@ public class SimpleDialogFragment extends DialogFragment {
         Fragment parentFragment = getParentFragment();
         if (parentFragment == null) {
             Activity activity = getActivity();
-            if (activity instanceof SimpleDialogListenerProvider) {
-                mListener = ((SimpleDialogListenerProvider) activity).getDialogListener();
+            if (activity instanceof ListenerProvider) {
+                mListener = ((ListenerProvider) activity).getDialogListener();
             }
         } else {
-            if (parentFragment instanceof SimpleDialogListenerProvider) {
-                mListener = ((SimpleDialogListenerProvider) parentFragment).getDialogListener();
+            if (parentFragment instanceof ListenerProvider) {
+                mListener = ((ListenerProvider) parentFragment).getDialogListener();
             }
         }
         mRequestCode = getArguments().getInt(ARGUMENT_REQUEST_CODE);
@@ -207,16 +207,16 @@ public class SimpleDialogFragment extends DialogFragment {
                 .setIcon(arguments.getInt(ARGUMENT_ICON_ID))
                 .setTitle(arguments.getCharSequence(ARGUMENT_TITLE))
                 .setMessage(arguments.getCharSequence(ARGUMENT_MESSAGE));
-        if (arguments.containsKey(ARGUMENT_ITEMS)) {
-            alertDialogBuilder.setItems(arguments.getCharSequenceArray(ARGUMENT_ITEMS),
-                    new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int which) {
-                            if (mListener != null) {
-                                mListener.onListItemClicked(mRequestCode, which);
-                            }
-                        }
-                    });
+        CharSequence[] items = arguments.getCharSequenceArray(ARGUMENT_ITEMS);
+        if (items != null) {
+            alertDialogBuilder.setItems(items, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialogInterface, int which) {
+                    if (mListener != null) {
+                        mListener.onListItemClicked(mRequestCode, which);
+                    }
+                }
+            });
         } else if (arguments.getBoolean(ARGUMENT_IS_SINGLE_CHOICE)) {
             alertDialogBuilder.setSingleChoiceItems(
                     arguments.getCharSequenceArray(ARGUMENT_CHOICE_ITEMS),
@@ -320,7 +320,7 @@ public class SimpleDialogFragment extends DialogFragment {
         show(fragment.getChildFragmentManager());
     }
 
-    public static class SimpleDialogListener {
+    public static class Listener {
         public void onListItemClicked(int requestCode, int index) {}
         public void onSingleChoiceItemClicked(int requestCode, int index) {}
         public void onPositiveButtonClicked(int requestCode) {}
@@ -333,8 +333,8 @@ public class SimpleDialogFragment extends DialogFragment {
         }
     }
 
-    public interface SimpleDialogListenerProvider {
-        SimpleDialogListener getDialogListener();
+    public interface ListenerProvider {
+        Listener getDialogListener();
     }
 
     public static class Builder {
@@ -450,24 +450,21 @@ public class SimpleDialogFragment extends DialogFragment {
         }
 
         public SimpleDialogFragment build() {
-
             SimpleDialogFragment fragment = new SimpleDialogFragment();
-
-            Bundle arguments = FragmentUtils.ensureArguments(fragment);
-            arguments.putInt(ARGUMENT_REQUEST_CODE, mRequestCode);
-            arguments.putInt(ARGUMENT_THEME, mTheme);
-            arguments.putInt(ARGUMENT_ICON_ID, mIconId);
-            arguments.putCharSequence(ARGUMENT_TITLE, mTitle);
-            arguments.putCharSequence(ARGUMENT_MESSAGE, mMessage);
-            arguments.putCharSequenceArray(ARGUMENT_ITEMS, mItems);
-            arguments.putBoolean(ARGUMENT_IS_SINGLE_CHOICE, mIsSingleChoice);
-            arguments.putCharSequenceArray(ARGUMENT_CHOICE_ITEMS, mChoiceItems);
-            arguments.putInt(ARGUMENT_CHOICE_CHECKED_ITEM, mChoiceCheckedItem);
-            arguments.putCharSequence(ARGUMENT_POSITIVE_BUTTON_TEXT, mPositiveButtonText);
-            arguments.putCharSequence(ARGUMENT_NEUTRAL_BUTTON_TEXT, mNeutralButtonText);
-            arguments.putCharSequence(ARGUMENT_NEGATIVE_BUTTON_TEXT, mNegativeButtonText);
-            arguments.putBoolean(ARGUMENT_CANCELABLE, mCancelable);
-
+            FragmentUtils.getArgumentsBuilder(fragment)
+                    .putInt(ARGUMENT_REQUEST_CODE, mRequestCode)
+                    .putInt(ARGUMENT_THEME, mTheme)
+                    .putInt(ARGUMENT_ICON_ID, mIconId)
+                    .putCharSequence(ARGUMENT_TITLE, mTitle)
+                    .putCharSequence(ARGUMENT_MESSAGE, mMessage)
+                    .putCharSequenceArray(ARGUMENT_ITEMS, mItems)
+                    .putBoolean(ARGUMENT_IS_SINGLE_CHOICE, mIsSingleChoice)
+                    .putCharSequenceArray(ARGUMENT_CHOICE_ITEMS, mChoiceItems)
+                    .putInt(ARGUMENT_CHOICE_CHECKED_ITEM, mChoiceCheckedItem)
+                    .putCharSequence(ARGUMENT_POSITIVE_BUTTON_TEXT, mPositiveButtonText)
+                    .putCharSequence(ARGUMENT_NEUTRAL_BUTTON_TEXT, mNeutralButtonText)
+                    .putCharSequence(ARGUMENT_NEGATIVE_BUTTON_TEXT, mNegativeButtonText)
+                    .putBoolean(ARGUMENT_CANCELABLE, mCancelable);
             return fragment;
         }
     }

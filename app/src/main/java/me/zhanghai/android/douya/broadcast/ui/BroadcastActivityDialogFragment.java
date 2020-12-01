@@ -7,26 +7,28 @@ package me.zhanghai.android.douya.broadcast.ui;
 
 import android.app.Dialog;
 import android.os.Bundle;
-import android.support.annotation.Keep;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.design.widget.TabLayout;
-import android.support.v4.app.Fragment;
-import android.support.v4.view.ViewPager;
-import android.support.v7.app.AppCompatDialog;
-import android.support.v7.app.AppCompatDialogFragment;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import com.google.android.material.tabs.TabLayout;
+import androidx.fragment.app.Fragment;
+import androidx.viewpager.widget.ViewPager;
+import androidx.appcompat.app.AppCompatDialog;
+import androidx.appcompat.app.AppCompatDialogFragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
 
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
+
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import me.zhanghai.android.douya.R;
 import me.zhanghai.android.douya.eventbus.BroadcastUpdatedEvent;
 import me.zhanghai.android.douya.eventbus.EventBusUtils;
-import me.zhanghai.android.douya.network.api.info.apiv2.Broadcast;
+import me.zhanghai.android.douya.network.api.info.frodo.Broadcast;
 import me.zhanghai.android.douya.ui.TabFragmentPagerAdapter;
 import me.zhanghai.android.douya.util.FragmentUtils;
 
@@ -34,7 +36,7 @@ public class BroadcastActivityDialogFragment extends AppCompatDialogFragment {
 
     private static final String KEY_PREFIX = BroadcastActivityDialogFragment.class.getName() + '.';
 
-    public static final String EXTRA_BROADCAST = KEY_PREFIX + "broadcast";
+    private static final String EXTRA_BROADCAST = KEY_PREFIX + "broadcast";
 
     @BindView(R.id.tab)
     TabLayout mTabLayout;
@@ -59,7 +61,7 @@ public class BroadcastActivityDialogFragment extends AppCompatDialogFragment {
     public static BroadcastActivityDialogFragment newInstance(Broadcast broadcast) {
         //noinspection deprecation
         BroadcastActivityDialogFragment fragment = new BroadcastActivityDialogFragment();
-        FragmentUtils.ensureArguments(fragment)
+        FragmentUtils.getArgumentsBuilder(fragment)
                 .putParcelable(EXTRA_BROADCAST, broadcast);
         return fragment;
     }
@@ -69,6 +71,8 @@ public class BroadcastActivityDialogFragment extends AppCompatDialogFragment {
         super.onCreate(savedInstanceState);
 
         mBroadcast = getArguments().getParcelable(EXTRA_BROADCAST);
+
+        EventBusUtils.register(this);
     }
 
     @NonNull
@@ -99,57 +103,37 @@ public class BroadcastActivityDialogFragment extends AppCompatDialogFragment {
         super.onActivityCreated(savedInstanceState);
 
         mTabAdapter = new TabFragmentPagerAdapter(this);
-        mTabAdapter.addTab(new TabFragmentPagerAdapter.FragmentCreator() {
-            @Override
-            public Fragment createFragment() {
-                return BroadcastLikerListFragment.newInstance(mBroadcast);
-            }
-        }, null);
-        mTabAdapter.addTab(new TabFragmentPagerAdapter.FragmentCreator() {
-            @Override
-            public Fragment createFragment() {
-                return BroadcastRebroadcasterListFragment.newInstance(mBroadcast);
-            }
-        }, null);
+        mTabAdapter.addTab(() -> BroadcastLikerListFragment.newInstance(mBroadcast), null);
+        mTabAdapter.addTab(() -> BroadcastRebroadcastListFragment.newInstance(
+                mBroadcast), null);
         updateTabTitle();
         mViewPager.setOffscreenPageLimit(mTabAdapter.getCount() - 1);
         mViewPager.setAdapter(mTabAdapter);
         mTabLayout.setupWithViewPager(mViewPager);
         mPositiveButton.setText(R.string.ok);
         mPositiveButton.setVisibility(View.VISIBLE);
-        mPositiveButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                dismiss();
-            }
-        });
+        mPositiveButton.setOnClickListener(view -> dismiss());
         mNegativeButton.setVisibility(View.GONE);
         mNeutralButton.setVisibility(View.GONE);
     }
 
     @Override
-    public void onStart(){
-        super.onStart();
-
-        EventBusUtils.register(this);
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
+    public void onDestroy() {
+        super.onDestroy();
 
         EventBusUtils.unregister(this);
     }
 
-    @Keep
-    public void onEventMainThread(BroadcastUpdatedEvent event) {
+    @Subscribe(threadMode = ThreadMode.POSTING)
+    public void onBroadcastUpdated(BroadcastUpdatedEvent event) {
 
         if (event.isFromMyself(this)) {
             return;
         }
 
-        if (event.broadcast.id == mBroadcast.id) {
-            mBroadcast = event.broadcast;
+        Broadcast updatedBroadcast = event.update(mBroadcast, this);
+        if (updatedBroadcast != null) {
+            mBroadcast = updatedBroadcast;
             updateTabTitle();
         }
     }
@@ -158,8 +142,8 @@ public class BroadcastActivityDialogFragment extends AppCompatDialogFragment {
         mTabAdapter.setPageTitle(mTabLayout, 0, getTabTitle(mBroadcast.likeCount,
                 R.string.broadcast_likers_title_format, R.string.broadcast_likers_title_empty));
         mTabAdapter.setPageTitle(mTabLayout, 1, getTabTitle(mBroadcast.rebroadcastCount,
-                R.string.broadcast_rebroadcasters_title_format,
-                R.string.broadcast_rebroadcasters_title_empty));
+                R.string.broadcast_rebroadcasts_title_format,
+                R.string.broadcast_rebroadcasts_title_empty));
     }
 
     private CharSequence getTabTitle(int count, int formatResId, int emptyResId) {

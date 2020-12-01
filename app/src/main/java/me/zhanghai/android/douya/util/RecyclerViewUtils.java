@@ -6,7 +6,7 @@
 package me.zhanghai.android.douya.util;
 
 import android.content.Context;
-import android.support.v7.widget.RecyclerView;
+import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 
 public class RecyclerViewUtils {
@@ -17,13 +17,17 @@ public class RecyclerViewUtils {
         return holder.itemView.getContext();
     }
 
-    public static boolean hasFirstChildReachedTop(RecyclerView recyclerView) {
+    public static boolean hasFirstChildReachedTop(RecyclerView recyclerView, int top) {
         RecyclerView.LayoutManager layoutManager = recyclerView.getLayoutManager();
         View firstChild = layoutManager.findViewByPosition(0);
         if (firstChild != null) {
-            return firstChild.getTop() <= 0;
+            return firstChild.getTop() <= top;
         } else {
             return layoutManager.getChildCount() > 0;
         }
+    }
+
+    public static boolean hasFirstChildReachedTop(RecyclerView recyclerView) {
+        return hasFirstChildReachedTop(recyclerView, 0);
     }
 }

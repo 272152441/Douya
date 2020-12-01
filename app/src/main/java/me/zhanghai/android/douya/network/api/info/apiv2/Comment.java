@@ -5,7 +5,6 @@
 
 package me.zhanghai.android.douya.network.api.info.apiv2;
 
-import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -13,38 +12,35 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.ArrayList;
 
-import me.zhanghai.android.douya.util.TimeUtils;
-
 public class Comment implements Parcelable {
 
-    public User author;
+    public SimpleUser author;
 
     public String content;
 
     @SerializedName("created")
-    public String createdAt;
+    public String createTime;
 
-    public ArrayList<Entity> entities = new ArrayList<>();
+    public ArrayList<TextEntity> entities = new ArrayList<>();
 
     public long id;
 
     public String source;
 
-    public boolean isAuthorOneself(Context context) {
-        return author.isOneself(context);
+    public boolean isAuthorOneself() {
+        return author.isOneself();
     }
 
-    public CharSequence getContentWithEntities(Context context) {
-        return Entity.applyEntities(content, entities, context);
+    public CharSequence getContentWithEntities() {
+        return TextEntity.applyEntities(content, entities);
     }
 
     public String getClipboardLabel() {
         return author.name;
     }
 
-    public String getClipboardText(Context context) {
-        return author.name + ' ' + TimeUtils.formatDoubanDateTime(createdAt, context) + '\n'
-                + getContentWithEntities(context);
+    public String getClipboardText() {
+        return getContentWithEntities().toString();
     }
 
 
@@ -60,10 +56,10 @@ public class Comment implements Parcelable {
     public Comment() {}
 
     protected Comment(Parcel in) {
-        author = in.readParcelable(User.class.getClassLoader());
+        author = in.readParcelable(SimpleUser.class.getClassLoader());
         content = in.readString();
-        createdAt = in.readString();
-        entities = in.createTypedArrayList(Entity.CREATOR);
+        createTime = in.readString();
+        entities = in.createTypedArrayList(TextEntity.CREATOR);
         id = in.readLong();
         source = in.readString();
     }
@@ -77,7 +73,7 @@ public class Comment implements Parcelable {
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeParcelable(author, 0);
         dest.writeString(content);
-        dest.writeString(createdAt);
+        dest.writeString(createTime);
         dest.writeTypedList(entities);
         dest.writeLong(id);
         dest.writeString(source);

@@ -9,7 +9,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <android.support.v7.widget.Toolbar
+    <me.zhanghai.android.douya.ui.DoubleClickToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?actionBarSize"
@@ -24,8 +24,8 @@
             android:layout_marginLeft="@dimen/content_horizontal_margin"
             android:ellipsize="end"
             android:singleLine="true"
-            style="@style/TextAppearance.AppCompat.Widget.ActionBar.Title" />
-    </android.support.v7.widget.Toolbar>
+            android:textAppearance="@style/TextAppearance.AppCompat.Widget.ActionBar.Title" />
+    </me.zhanghai.android.douya.ui.DoubleClickToolbar>
 
     <Space
         android:layout_width="0dp"
@@ -34,6 +34,7 @@
         android:layout_marginTop="@dimen/profile_large_avatar_bottom_from_toolbar_bottom" />
 
     <LinearLayout
+        android:id="@+id/profile_header_animate_changes_layout_1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="-4dp"
@@ -41,6 +42,7 @@
         android:paddingLeft="@dimen/screen_edge_horizontal_margin"
         android:paddingRight="@dimen/screen_edge_horizontal_margin"
         android:animateLayoutChanges="true"
+        android:clipToPadding="false"
         android:gravity="center"
         android:orientation="vertical">
 
@@ -65,8 +67,8 @@
             android:maxLines="1"
             android:textAppearance="@style/TextAppearance.AppCompat.Body1" />
 
-        <me.zhanghai.android.douya.ui.JoinedAtLocationAutoGoneTextView
-            android:id="@+id/joined_at_location"
+        <me.zhanghai.android.douya.ui.JoinTimeLocationAutoGoneTextView
+            android:id="@+id/join_time_location"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:minHeight="24dp"
@@ -82,13 +84,15 @@
         android:layout_weight="1" />
 
     <FrameLayout
+        android:id="@+id/profile_header_animate_changes_layout_2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="-16dp"
         android:layout_marginBottom="-16dp"
         android:paddingLeft="@dimen/screen_edge_horizontal_margin"
         android:paddingRight="@dimen/screen_edge_horizontal_margin"
-        android:animateLayoutChanges="true">
+        android:animateLayoutChanges="true"
+        android:clipToPadding="false">
 
         <me.zhanghai.android.douya.ui.AnimateCompoundDrawableButton
             android:id="@+id/follow"

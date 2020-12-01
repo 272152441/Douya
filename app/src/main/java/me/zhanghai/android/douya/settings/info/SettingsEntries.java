@@ -5,182 +5,234 @@
 
 package me.zhanghai.android.douya.settings.info;
 
-import android.content.Context;
+import android.net.Uri;
+import androidx.annotation.ArrayRes;
+import androidx.annotation.BoolRes;
+import androidx.annotation.IntegerRes;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
+import android.text.TextUtils;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import me.zhanghai.android.douya.DouyaApplication;
 import me.zhanghai.android.douya.util.LogUtils;
 import me.zhanghai.android.douya.util.SharedPrefsUtils;
 
-public class SettingsEntries {
+public interface SettingsEntries {
 
-    public static class StringSettingsEntry extends SettingsEntry<String> {
+    class StringSettingsEntry extends SettingsEntry<String> {
 
-        public StringSettingsEntry(int keyResId, int defaultValueResId) {
+        public StringSettingsEntry(@StringRes int keyResId, @StringRes int defaultValueResId) {
             super(keyResId, defaultValueResId);
         }
 
+        @NonNull
         @Override
-        public String getDefaultValue(Context context) {
-            return context.getString(getDefaultValueResId());
+        public String getDefaultValue() {
+            return DouyaApplication.getInstance().getString(getDefaultValueResId());
+        }
+
+        @Nullable
+        @Override
+        public String getValue() {
+            return SharedPrefsUtils.getString(this);
         }
 
         @Override
-        public String getValue(Context context) {
-            return SharedPrefsUtils.getString(this, context);
-        }
-
-        @Override
-        public void putValue(String value, Context context) {
-            SharedPrefsUtils.putString(this, value, context);
+        public void putValue(@Nullable String value) {
+            SharedPrefsUtils.putString(this, value);
         }
     }
 
-    public static class StringSetSettingsEntry extends SettingsEntry<Set<String>> {
+    class StringSetSettingsEntry extends SettingsEntry<Set<String>> {
 
-        public StringSetSettingsEntry(int keyResId, int defaultValueResId) {
+        public StringSetSettingsEntry(@StringRes int keyResId, @ArrayRes int defaultValueResId) {
             super(keyResId, defaultValueResId);
         }
 
+        @NonNull
         @Override
-        public Set<String> getDefaultValue(Context context) {
+        public Set<String> getDefaultValue() {
             Set<String> stringSet = new HashSet<>();
-            Collections.addAll(stringSet,
-                    context.getResources().getStringArray(getDefaultValueResId()));
+            Collections.addAll(stringSet, DouyaApplication.getInstance().getResources()
+                    .getStringArray(getDefaultValueResId()));
             return stringSet;
         }
 
+        @Nullable
         @Override
-        public Set<String> getValue(Context context) {
-            return SharedPrefsUtils.getStringSet(this, context);
+        public Set<String> getValue() {
+            return SharedPrefsUtils.getStringSet(this);
         }
 
         @Override
-        public void putValue(Set<String> value, Context context) {
-            SharedPrefsUtils.putStringSet(this, value, context);
+        public void putValue(@Nullable Set<String> value) {
+            SharedPrefsUtils.putStringSet(this, value);
         }
     }
 
-    public static class IntegerSettingsEntry extends SettingsEntry<Integer> {
+    class IntegerSettingsEntry extends SettingsEntry<Integer> {
 
-        public IntegerSettingsEntry(int keyResId, int defaultValueResId) {
+        public IntegerSettingsEntry(@StringRes int keyResId, @IntegerRes int defaultValueResId) {
             super(keyResId, defaultValueResId);
         }
 
+        @NonNull
         @Override
-        public Integer getDefaultValue(Context context) {
-            return context.getResources().getInteger(getDefaultValueResId());
+        public Integer getDefaultValue() {
+            return DouyaApplication.getInstance().getResources().getInteger(getDefaultValueResId());
+        }
+
+        @NonNull
+        @Override
+        public Integer getValue() {
+            return SharedPrefsUtils.getInt(this);
         }
 
         @Override
-        public Integer getValue(Context context) {
-            return SharedPrefsUtils.getInt(this, context);
-        }
-
-        @Override
-        public void putValue(Integer value, Context context) {
-            SharedPrefsUtils.putInt(this, value, context);
+        public void putValue(@NonNull Integer value) {
+            SharedPrefsUtils.putInt(this, value);
         }
     }
 
-    public static class LongSettingsEntry extends SettingsEntry<Long> {
+    class LongSettingsEntry extends SettingsEntry<Long> {
 
-        public LongSettingsEntry(int keyResId, int defaultValueResId) {
+        public LongSettingsEntry(@StringRes int keyResId, @StringRes int defaultValueResId) {
             super(keyResId, defaultValueResId);
         }
 
+        @NonNull
         @Override
-        public Long getDefaultValue(Context context) {
-            return Long.valueOf(context.getResources().getString(getDefaultValueResId()));
+        public Long getDefaultValue() {
+            return Long.valueOf(DouyaApplication.getInstance().getResources().getString(
+                    getDefaultValueResId()));
+        }
+
+        @NonNull
+        @Override
+        public Long getValue() {
+            return SharedPrefsUtils.getLong(this);
         }
 
         @Override
-        public Long getValue(Context context) {
-            return SharedPrefsUtils.getLong(this, context);
-        }
-
-        @Override
-        public void putValue(Long value, Context context) {
-            SharedPrefsUtils.putLong(this, value, context);
+        public void putValue(@NonNull Long value) {
+            SharedPrefsUtils.putLong(this, value);
         }
     }
 
-    public static class FloatSettingsEntry extends SettingsEntry<Float> {
+    class FloatSettingsEntry extends SettingsEntry<Float> {
 
-        public FloatSettingsEntry(int keyResId, int defaultValueResId) {
+        public FloatSettingsEntry(@StringRes int keyResId, @StringRes int defaultValueResId) {
             super(keyResId, defaultValueResId);
         }
 
+        @NonNull
         @Override
-        public Float getDefaultValue(Context context) {
-            return Float.valueOf(context.getResources().getString(getDefaultValueResId()));
+        public Float getDefaultValue() {
+            return Float.valueOf(DouyaApplication.getInstance().getResources().getString(
+                    getDefaultValueResId()));
+        }
+
+        @NonNull
+        @Override
+        public Float getValue() {
+            return SharedPrefsUtils.getFloat(this);
         }
 
         @Override
-        public Float getValue(Context context) {
-            return SharedPrefsUtils.getFloat(this, context);
-        }
-
-        @Override
-        public void putValue(Float value, Context context) {
-            SharedPrefsUtils.putFloat(this, value, context);
+        public void putValue(@NonNull Float value) {
+            SharedPrefsUtils.putFloat(this, value);
         }
     }
 
-    public static class BooleanSettingsEntry extends SettingsEntry<Boolean> {
+    class BooleanSettingsEntry extends SettingsEntry<Boolean> {
 
-        public BooleanSettingsEntry(int keyResId, int defaultValueResId) {
+        public BooleanSettingsEntry(@StringRes int keyResId, @BoolRes int defaultValueResId) {
             super(keyResId, defaultValueResId);
         }
 
+        @NonNull
         @Override
-        public Boolean getDefaultValue(Context context) {
-            return context.getResources().getBoolean(getDefaultValueResId());
+        public Boolean getDefaultValue() {
+            return DouyaApplication.getInstance().getResources().getBoolean(getDefaultValueResId());
+        }
+
+        @NonNull
+        @Override
+        public Boolean getValue() {
+            return SharedPrefsUtils.getBoolean(this);
         }
 
         @Override
-        public Boolean getValue(Context context) {
-            return SharedPrefsUtils.getBoolean(this, context);
-        }
-
-        @Override
-        public void putValue(Boolean value, Context context) {
-            SharedPrefsUtils.putBoolean(this, value, context);
+        public void putValue(@NonNull Boolean value) {
+            SharedPrefsUtils.putBoolean(this, value);
         }
     }
 
-    public static class EnumSettingsEntry<E extends Enum<E>> extends StringSettingsEntry {
+    // Extending StringSettingsEntry so that we can support ListPreference.
+    class EnumSettingsEntry<E extends Enum<E>> extends StringSettingsEntry {
 
         private E[] mEnumValues;
 
-        public EnumSettingsEntry(int keyResId, int defaultValueResId, Class<E> enumClass) {
+        public EnumSettingsEntry(@StringRes int keyResId, @StringRes int defaultValueResId,
+                                 Class<E> enumClass) {
             super(keyResId, defaultValueResId);
 
             mEnumValues = enumClass.getEnumConstants();
         }
 
-        public E getDefaultEnumValue(Context context) {
-            return mEnumValues[Integer.parseInt(getDefaultValue(context))];
+        @NonNull
+        public E getDefaultEnumValue() {
+            return mEnumValues[Integer.parseInt(getDefaultValue())];
         }
 
-        public E getEnumValue(Context context) {
-            int ordinal = Integer.parseInt(getValue(context));
+        @NonNull
+        public E getEnumValue() {
+            int ordinal = Integer.parseInt(getValue());
             if (ordinal < 0 || ordinal >= mEnumValues.length) {
-                LogUtils.w("Invalid ordinal " + ordinal + ", with key=" + getKey(context)
+                LogUtils.w("Invalid ordinal " + ordinal + ", with key=" + getKey()
                         + ", enum values=" + Arrays.toString(mEnumValues)
                         + ", reverting to default value");
-                E enumValue = getDefaultEnumValue(context);
-                putEnumValue(enumValue, context);
+                E enumValue = getDefaultEnumValue();
+                putEnumValue(enumValue);
                 return enumValue;
             }
             return mEnumValues[ordinal];
         }
 
-        public void putEnumValue(E value, Context context) {
-            putValue(String.valueOf(value.ordinal()), context);
+        public void putEnumValue(@NonNull E value) {
+            putValue(String.valueOf(value.ordinal()));
+        }
+    }
+
+    class UriSettingsEntry extends StringSettingsEntry {
+
+        public UriSettingsEntry(@StringRes int keyResId, @StringRes int defaultValueResId) {
+            super(keyResId, defaultValueResId);
+        }
+
+        @NonNull
+        public Uri getDefaultUriValue() {
+            return stringToUri(getDefaultValue());
+        }
+
+        @Nullable
+        public Uri getUriValue() {
+            return stringToUri(getValue());
+        }
+
+        @Nullable
+        private static Uri stringToUri(@Nullable String string) {
+            return !TextUtils.isEmpty(string) ? Uri.parse(string) : null;
+        }
+
+        public void putUriValue(@Nullable Uri value) {
+            putValue(value != null ? value.toString() : null);
         }
     }
 }

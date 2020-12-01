@@ -6,16 +6,20 @@
 
 Yet another Material Design Android app for [Douban](https://www.douban.com).
 
-![Travis CI](https://travis-ci.org/DreaminginCodeZH/Douya.svg)
+![Travis CI](https://travis-ci.org/zhanghai/Douya.svg)
 
-[Douya CI Builds](https://github.com/DreaminginCodeZH/DouyaCiBuilds)
+<!--<a href="https://play.google.com/store/apps/details?id=me.zhanghai.android.douya" target="_blank"><img alt="Google Play" height="90" src="https://play.google.com/intl/en_US/badges/images/generic/en_badge_web_generic.png"/></a>-->
 
-[Douya API Key](https://github.com/DreaminginCodeZH/DouyaApiKey)
+Download: [Douya Latest Release Build](https://github.com/zhanghai/Douya/releases/latest)
+
+[Douya CI Builds](https://github.com/zhanghai/DouyaCiBuilds)
+
+[Douya API Key](https://github.com/zhanghai/DouyaApiKey)
 
 ## Some Features
 
 - Material Design
-- [Start time optimization](https://github.com/DreaminginCodeZH/MaterialColdStart)
+- [Start time optimization](https://github.com/zhanghai/MaterialColdStart)
 - Lollipop shared element transition
 - Screen rotation support.
 - Staggered grid layout for tablet.
@@ -49,7 +53,7 @@ Video:
 Most data are fetched from network while some of them are cached for offline.
 
 - Account system based on  Android `AccountManager`.
-- Volley with custom extensions for network requests.
+- Retrofit with custom extensions for network requests.
 - Gson for data model.
 - Glide for image loading.
 - DiskLRUCache with custom extensions for caching.
@@ -62,11 +66,11 @@ Most data are fetched from network while some of them are cached for offline.
 
 ## Libraries created for this project
 
-- [MaterialColdStart](https://github.com/DreaminginCodeZH/MaterialColdStart)，800+ Stars
-- [MaterialProgressBar](https://github.com/DreaminginCodeZH/MaterialProgressBar)，500+ Stars
-- [CustomTabsHelper](https://github.com/DreaminginCodeZH/CustomTabsHelper)，200+ Stars
-- [MaterialEditText](https://github.com/DreaminginCodeZH/MaterialEditText)
-- [SystemUiHelper](https://github.com/DreaminginCodeZH/SystemUiHelper)
+- [MaterialColdStart](https://github.com/zhanghai/MaterialColdStart)，800+ Stars
+- [MaterialProgressBar](https://github.com/zhanghai/MaterialProgressBar)，500+ Stars
+- [CustomTabsHelper](https://github.com/zhanghai/CustomTabsHelper)，200+ Stars
+- [MaterialEditText](https://github.com/zhanghai/MaterialEditText)
+- [SystemUiHelper](https://github.com/zhanghai/SystemUiHelper)
 
 ## Third party libraries
 
@@ -76,23 +80,24 @@ Most data are fetched from network while some of them are cached for offline.
 - [ButterKnife](https://github.com/JakeWharton/butterknife)
 - [DiskLruCache](https://github.com/JakeWharton/DiskLruCache/)
 - [ThreeTenABP](https://github.com/JakeWharton/ThreeTenABP/)
-- [Volley](https://github.com/mcxiaoke/android-volley)
+- [Retrofit](https://github.com/square/retrofit)
 - [EventBus](https://github.com/greenrobot/EventBus)
-- [CustomTabsHelper](https://github.com/DreaminginCodeZH/CustomTabsHelper)
-- [MaterialEditText](https://github.com/DreaminginCodeZH/MaterialEditText)
-- [MaterialProgressBar](https://github.com/DreaminginCodeZH/MaterialProgressBar)
-- [SystemUiHelper](https://github.com/DreaminginCodeZH/SystemUiHelper)
-- [MaterialColdStart](https://github.com/DreaminginCodeZH/MaterialColdStart)
+- [CustomTabsHelper](https://github.com/zhanghai/CustomTabsHelper)
+- [EffortlessPermissions](https://github.com/zhanghai/EffortlessPermissions)
+- [MaterialEditText](https://github.com/zhanghai/MaterialEditText)
+- [MaterialProgressBar](https://github.com/zhanghai/MaterialProgressBar)
+- [SystemUiHelper](https://github.com/zhanghai/SystemUiHelper)
+- [MaterialColdStart](https://github.com/zhanghai/MaterialColdStart)
 
 ## Building
 
-You can download the APK file from [releases](https://github.com/DreaminginCodeZH/Douya/releases) of this project.
+You can download the APK file from [releases](https://github.com/zhanghai/Douya/releases) of this project.
 
 For building this project yourself:
 
 1. Create `signing.properties`:
 
-   ```ini
+```ini
 storeFile=YOUR_STORE_FILE
 storePassword=
 keyAlias=
@@ -103,6 +108,22 @@ keyPassword=
 
 ## Using
 
-After installation, please install [Douya API Key](https://github.com/DreaminginCodeZH/DouyaApiKey) to set up API key for this app.
+After installation, please install [Douya API Key](https://github.com/zhanghai/DouyaApiKey) to set up API key for this app.
 
 Please don't install APKs from untrusted sources, so that you won't leak your username and password.
+
+## License
+
+    Copyright 2015 Zhang Hai
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.

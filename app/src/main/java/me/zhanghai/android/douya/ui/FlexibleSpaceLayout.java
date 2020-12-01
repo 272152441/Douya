@@ -10,12 +10,11 @@ import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.os.Build;
-import android.support.v4.view.InputDeviceCompat;
-import android.support.v4.view.MotionEventCompat;
-import android.support.v4.view.ViewCompat;
-import android.support.v4.view.animation.FastOutSlowInInterpolator;
-import android.support.v4.widget.EdgeEffectCompat;
-import android.support.v4.widget.FriendlyScrollerCompat;
+import androidx.core.view.InputDeviceCompat;
+import androidx.core.view.MotionEventCompat;
+import androidx.core.view.ViewCompat;
+import androidx.interpolator.view.animation.FastOutSlowInInterpolator;
+import androidx.core.widget.EdgeEffectCompat;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.MotionEvent;
@@ -25,6 +24,7 @@ import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.widget.LinearLayout;
+import android.widget.Scroller;
 
 import butterknife.BindInt;
 import butterknife.ButterKnife;
@@ -51,7 +51,7 @@ public class FlexibleSpaceLayout extends LinearLayout {
     private float mLastMotionY;
     private VelocityTracker mVelocityTracker;
 
-    private FriendlyScrollerCompat mScroller;
+    private Scroller mScroller;
     private EdgeEffectCompat mEdgeEffectBottom;
 
     private float mView_verticalScrollFactor = Float.MIN_VALUE;
@@ -96,7 +96,7 @@ public class FlexibleSpaceLayout extends LinearLayout {
         mMinimumFlingVelocity = viewConfiguration.getScaledMinimumFlingVelocity();
         mMaximumFlingVelocity = viewConfiguration.getScaledMaximumFlingVelocity();
 
-        mScroller = FriendlyScrollerCompat.create(context);
+        mScroller = new Scroller(context);
         mEdgeEffectBottom = new EdgeEffectCompat(context);
     }
 
@@ -178,6 +178,14 @@ public class FlexibleSpaceLayout extends LinearLayout {
         // then when maxY is set to an actual value.
         mScroller.fling(0, mScroll, 0, (int) velocity, 0, 0, -Integer.MAX_VALUE, Integer.MAX_VALUE);
         ViewCompat.postInvalidateOnAnimation(this);
+    }
+
+    public boolean isHeaderOpen() {
+        return mScroll == 0;
+    }
+
+    public boolean isHeaderCollapsed() {
+        return mHeaderCollapsed;
     }
 
     @Override
@@ -402,8 +410,12 @@ public class FlexibleSpaceLayout extends LinearLayout {
     }
 
     private void snapHeaderView() {
+        animateHeaderViewScroll(!mHeaderCollapsed);
+    }
+
+    public void animateHeaderViewScroll(boolean toCollapsed) {
         ObjectAnimator animator = ObjectAnimator.ofInt(this, SCROLL, mScroll,
-                mHeaderCollapsed ? 0 : mHeaderView.getScrollExtent());
+                toCollapsed ? mHeaderView.getScrollExtent() : 0);
         animator.setDuration(mMediumAnimationTime);
         animator.setInterpolator(new FastOutSlowInInterpolator());
         animator.start();

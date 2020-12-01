@@ -14,19 +14,23 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import me.zhanghai.android.douya.broadcast.content.DeleteBroadcastManager;
 import me.zhanghai.android.douya.broadcast.content.DeleteBroadcastCommentManager;
+import me.zhanghai.android.douya.broadcast.content.DeleteBroadcastManager;
 import me.zhanghai.android.douya.broadcast.content.LikeBroadcastManager;
 import me.zhanghai.android.douya.broadcast.content.RebroadcastBroadcastManager;
 import me.zhanghai.android.douya.broadcast.content.SendBroadcastCommentManager;
+import me.zhanghai.android.douya.broadcast.content.SendBroadcastManager;
 import me.zhanghai.android.douya.followship.content.FollowUserManager;
+import me.zhanghai.android.douya.item.content.CollectItemManager;
+import me.zhanghai.android.douya.item.content.UncollectItemManager;
+import me.zhanghai.android.douya.item.content.VoteItemCollectionManager;
 
 public class ResourceWriterService extends Service {
 
     private List<ResourceWriterManager> mWriterManagers = new ArrayList<>();
 
-    public static Intent makeIntent(Context context) {
-        return new Intent(context, ResourceWriterService.class);
+    public static void start(Context context) {
+        context.startService(new Intent(context, ResourceWriterService.class));
     }
 
     @Override
@@ -34,11 +38,15 @@ public class ResourceWriterService extends Service {
         super.onCreate();
 
         addWriterManager(FollowUserManager.getInstance());
+        addWriterManager(SendBroadcastManager.getInstance());
         addWriterManager(LikeBroadcastManager.getInstance());
         addWriterManager(RebroadcastBroadcastManager.getInstance());
         addWriterManager(DeleteBroadcastManager.getInstance());
         addWriterManager(DeleteBroadcastCommentManager.getInstance());
         addWriterManager(SendBroadcastCommentManager.getInstance());
+        addWriterManager(CollectItemManager.getInstance());
+        addWriterManager(UncollectItemManager.getInstance());
+        addWriterManager(VoteItemCollectionManager.getInstance());
     }
 
     private void addWriterManager(ResourceWriterManager writerManager) {

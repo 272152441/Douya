@@ -5,11 +5,9 @@
 
 package me.zhanghai.android.douya.ui;
 
-import android.annotation.TargetApi;
 import android.content.Context;
-import android.os.Build;
+import androidx.appcompat.widget.AppCompatTextView;
 import android.util.AttributeSet;
-import android.widget.TextView;
 
 import org.threeten.bp.ZonedDateTime;
 import org.threeten.bp.format.DateTimeParseException;
@@ -17,7 +15,7 @@ import org.threeten.bp.format.DateTimeParseException;
 import me.zhanghai.android.douya.util.LogUtils;
 import me.zhanghai.android.douya.util.TimeUtils;
 
-public class TimeTextView extends TextView {
+public class TimeTextView extends AppCompatTextView {
 
     private static final int UPDATE_TIME_TEXT_INTERVAL_MILLI = 30 * 1000;
 
@@ -42,12 +40,6 @@ public class TimeTextView extends TextView {
         super(context, attrs, defStyleAttr);
     }
 
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    public TimeTextView(Context context, AttributeSet attrs, int defStyleAttr,
-                        int defStyleRes) {
-        super(context, attrs, defStyleAttr, defStyleRes);
-    }
-
     public ZonedDateTime getTime() {
         return mTime;
     }
@@ -70,7 +62,7 @@ public class TimeTextView extends TextView {
         }
     }
 
-    private void updateTimeText() {
+    protected void updateTimeText() {
         removeCallbacks(mUpdateTimeTextRunnable);
         if (mTime != null) {
             setTimeText(formatTime(mTime));

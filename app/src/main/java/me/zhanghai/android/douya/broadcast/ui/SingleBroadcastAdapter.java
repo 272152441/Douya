@@ -5,7 +5,8 @@
 
 package me.zhanghai.android.douya.broadcast.ui;
 
-import android.support.v7.widget.RecyclerView;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -13,7 +14,7 @@ import android.widget.Button;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import me.zhanghai.android.douya.R;
-import me.zhanghai.android.douya.network.api.info.apiv2.Broadcast;
+import me.zhanghai.android.douya.network.api.info.frodo.Broadcast;
 import me.zhanghai.android.douya.util.ViewUtils;
 
 public class SingleBroadcastAdapter
@@ -66,45 +67,44 @@ public class SingleBroadcastAdapter
         return 0;
     }
 
+    @NonNull
     @Override
-    public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         return new ViewHolder(ViewUtils.inflate(R.layout.single_broadcast_item, parent));
     }
 
     @Override
-    public void onBindViewHolder(final ViewHolder holder, int position) {
-        final Broadcast broadcast = mBroadcast;
-        holder.broadcastLayout.bindBroadcast(broadcast);
+    public void onBindViewHolder(@NonNull final ViewHolder holder, int position) {
+        Broadcast effectiveBroadcast = mBroadcast.getEffectiveBroadcast();
+        holder.broadcastLayout.bind(mBroadcast);
+        holder.broadcastLayout.setTextSelectable();
         holder.broadcastLayout.setListener(new BroadcastLayout.Listener() {
             @Override
             public void onLikeClicked() {
-                mListener.onLike(broadcast, !broadcast.isLiked);
+                mListener.onLike(effectiveBroadcast, !effectiveBroadcast.isLiked);
             }
             @Override
-            public void onRebroadcastClicked() {
-                mListener.onRebroadcast(broadcast, !broadcast.isRebroadcasted());
+            public void onRebroadcastClicked(boolean isLongClick) {
+                mListener.onRebroadcast(mBroadcast, !mBroadcast.isSimpleRebroadcastByOneself(),
+                        isLongClick);
             }
             @Override
             public void onCommentClicked() {
-                mListener.onComment(broadcast);
+                mListener.onComment(effectiveBroadcast);
             }
         });
-        holder.viewActivityButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mListener.onViewActivity(broadcast);
-            }
-        });
+        holder.viewActivityButton.setOnClickListener(view -> mListener.onViewActivity(
+                effectiveBroadcast));
     }
 
     @Override
-    public void onViewRecycled(ViewHolder holder) {
-        holder.broadcastLayout.releaseBroadcast();
+    public void onViewRecycled(@NonNull ViewHolder holder) {
+        holder.broadcastLayout.unbind();
     }
 
     public interface Listener {
         void onLike(Broadcast broadcast, boolean like);
-        void onRebroadcast(Broadcast broadcast, boolean rebroadcast);
+        void onRebroadcast(Broadcast broadcast, boolean rebroadcast, boolean quick);
         void onComment(Broadcast broadcast);
         void onViewActivity(Broadcast broadcast);
     }

@@ -8,7 +8,6 @@ package me.zhanghai.android.douya.profile.ui;
 import android.content.Context;
 import android.text.TextUtils;
 import android.util.AttributeSet;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -21,12 +20,11 @@ import butterknife.ButterKnife;
 import me.zhanghai.android.douya.R;
 import me.zhanghai.android.douya.broadcast.ui.BroadcastActivity;
 import me.zhanghai.android.douya.broadcast.ui.BroadcastListActivity;
-import me.zhanghai.android.douya.network.api.info.apiv2.Broadcast;
-import me.zhanghai.android.douya.network.api.info.apiv2.Image;
-import me.zhanghai.android.douya.network.api.info.apiv2.Photo;
-import me.zhanghai.android.douya.network.api.info.apiv2.UserInfo;
+import me.zhanghai.android.douya.network.api.info.frodo.Broadcast;
+import me.zhanghai.android.douya.network.api.info.apiv2.User;
 import me.zhanghai.android.douya.ui.FriendlyCardView;
-import me.zhanghai.android.douya.ui.TimeActionTextView;
+import me.zhanghai.android.douya.ui.SizedImageItem;
+import me.zhanghai.android.douya.ui.TimeTextView;
 import me.zhanghai.android.douya.util.ImageUtils;
 import me.zhanghai.android.douya.util.ViewUtils;
 
@@ -62,38 +60,34 @@ public class ProfileBroadcastsLayout extends FriendlyCardView {
     }
 
     private void init() {
-        inflate(getContext(), R.layout.profile_broadcasts_layout, this);
+        ViewUtils.inflateInto(R.layout.profile_broadcasts_layout, this);
         ButterKnife.bind(this);
     }
 
-    public void bind(final UserInfo userInfo, List<Broadcast> broadcastList) {
+    public void bind(User user, List<Broadcast> broadcastList) {
 
-        final Context context = getContext();
-        View.OnClickListener viewMoreListener = new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                context.startActivity(BroadcastListActivity.makeIntent(userInfo, context));
-            }
-        };
+        Context context = getContext();
+        View.OnClickListener viewMoreListener = view -> context.startActivity(
+                BroadcastListActivity.makeIntent(user, context));
         mTitleText.setOnClickListener(viewMoreListener);
         mViewMoreText.setOnClickListener(viewMoreListener);
 
         int i = 0;
-        for (final Broadcast broadcast : broadcastList) {
+        for (Broadcast broadcast : broadcastList) {
 
             if (i >= BROADCAST_COUNT_MAX) {
                 break;
             }
 
-            if (TextUtils.isEmpty(broadcast.text) || broadcast.isRebroadcasted()) {
+            if (broadcast.rebroadcastedBroadcast != null) {
                 continue;
             }
 
             if (i >= mBroadcastList.getChildCount()) {
-                LayoutInflater.from(context)
-                        .inflate(R.layout.profile_broadcast_item, mBroadcastList);
+                ViewUtils.inflateInto(R.layout.profile_broadcast_item, mBroadcastList);
             }
             View broadcastLayout = mBroadcastList.getChildAt(i);
+            broadcastLayout.setVisibility(VISIBLE);
             BroadcastLayoutHolder holder = (BroadcastLayoutHolder) broadcastLayout.getTag();
             if (holder == null) {
                 holder = new BroadcastLayoutHolder(broadcastLayout);
@@ -103,31 +97,38 @@ public class ProfileBroadcastsLayout extends FriendlyCardView {
 
             // HACK: Should not change on rebind.
             if (holder.boundBroadcastId != broadcast.id) {
-                String imageUrl = null;
+                SizedImageItem image = null;
                 if (broadcast.attachment != null) {
-                    imageUrl = broadcast.attachment.image;
+                    image = broadcast.attachment.image;
                 }
-                if (TextUtils.isEmpty(imageUrl)) {
-                    List<Image> images = broadcast.images.size() > 0 ? broadcast.images
-                            : Photo.toImageList(broadcast.photos);
+                if (image == null) {
+                    List<? extends SizedImageItem> images = broadcast.attachment != null
+                            && broadcast.attachment.imageList != null ?
+                            broadcast.attachment.imageList.images : broadcast.images;
                     if (images.size() > 0){
-                        imageUrl = images.get(0).medium;
+                        image = images.get(0);
                     }
                 }
-                if (!TextUtils.isEmpty(imageUrl)) {
+                if (image != null) {
                     holder.image.setVisibility(VISIBLE);
-                    ImageUtils.loadImage(holder.image, imageUrl, context);
+                    ImageUtils.loadImage(holder.image, image);
                 } else {
                     holder.image.setVisibility(GONE);
                 }
-                holder.textText.setText(broadcast.getTextWithEntities(context));
-                holder.timeActionText.setDoubanTimeAndAction(broadcast.createdAt, broadcast.action);
-                broadcastLayout.setOnClickListener(new OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        context.startActivity(BroadcastActivity.makeIntent(broadcast, context));
-                    }
-                });
+                CharSequence text = broadcast.getTextWithEntities(context);
+                if (TextUtils.isEmpty(text) && broadcast.attachment != null) {
+                    text = broadcast.attachment.title;
+                }
+                holder.textText.setText(text);
+                boolean hasTime = !TextUtils.isEmpty(broadcast.createTime);
+                ViewUtils.setVisibleOrGone(holder.timeText, hasTime);
+                if (hasTime) {
+                    holder.timeText.setDoubanTime(broadcast.createTime);
+                }
+                ViewUtils.setVisibleOrGone(holder.timeActionSpace, hasTime);
+                holder.actionText.setText(broadcast.action);
+                broadcastLayout.setOnClickListener(view -> context.startActivity(
+                        BroadcastActivity.makeIntent(broadcast, context)));
                 holder.boundBroadcastId = broadcast.id;
             }
 
@@ -137,15 +138,15 @@ public class ProfileBroadcastsLayout extends FriendlyCardView {
         ViewUtils.setVisibleOrGone(mBroadcastList, i != 0);
         ViewUtils.setVisibleOrGone(mEmptyView, i == 0);
 
-        if (userInfo.broadcastCount > i) {
+        if (user.broadcastCount > i) {
             mViewMoreText.setText(context.getString(R.string.view_more_with_count_format,
-                    userInfo.broadcastCount));
+                    user.broadcastCount));
         } else {
             mViewMoreText.setVisibility(GONE);
         }
 
         for (int count = mBroadcastList.getChildCount(); i < count; ++i) {
-            ViewUtils.setVisibleOrGone(mBroadcastList.getChildAt(i), false);
+            mBroadcastList.getChildAt(i).setVisibility(GONE);
         }
     }
 
@@ -155,8 +156,13 @@ public class ProfileBroadcastsLayout extends FriendlyCardView {
         public ImageView image;
         @BindView(R.id.text)
         public TextView textText;
-        @BindView(R.id.time_action)
-        public TimeActionTextView timeActionText;
+        @BindView(R.id.time)
+        public TimeTextView timeText;
+        @BindView(R.id.time_action_space)
+        public View timeActionSpace;
+        @BindView(R.id.action)
+        public TextView actionText;
+
         public long boundBroadcastId;
 
         public BroadcastLayoutHolder(View broadcastLayout) {

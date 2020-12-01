@@ -5,115 +5,46 @@
 
 package me.zhanghai.android.douya.user.content;
 
-import com.android.volley.VolleyError;
-
 import java.util.Collections;
 import java.util.List;
 
-import me.zhanghai.android.douya.content.ResourceFragment;
-import me.zhanghai.android.douya.network.RequestFragment;
-import me.zhanghai.android.douya.network.api.ApiRequest;
-import me.zhanghai.android.douya.network.api.info.apiv2.User;
+import me.zhanghai.android.douya.content.MoreRawListResourceFragment;
+import me.zhanghai.android.douya.network.api.ApiError;
+import me.zhanghai.android.douya.network.api.info.frodo.SimpleUser;
 
-public abstract class BaseUserListResource<T> extends ResourceFragment
-        implements RequestFragment.Listener<T, BaseUserListResource.State> {
+public abstract class BaseUserListResource<ResponseType>
+        extends MoreRawListResourceFragment<ResponseType, SimpleUser> {
 
-    private static final int DEFAULT_COUNT_PER_LOAD = 20;
-
-    private List<User> mUserList;
-
-    private boolean mCanLoadMore = true;
-    private boolean mLoading;
-    private boolean mLoadingMore;
-
-    /**
-     * @return Unmodifiable user list, or {@code null}.
-     */
-    public List<User> get() {
-        return mUserList != null ? Collections.unmodifiableList(mUserList) : null;
-    }
-
-    public boolean has() {
-        return mUserList != null;
-    }
-
-    public boolean isEmpty() {
-        return mUserList == null || mUserList.isEmpty();
-    }
-
-    public boolean isLoading() {
-        return mLoading;
-    }
-
-    public boolean isLoadingMore() {
-        return mLoadingMore;
+    @Override
+    protected void onLoadStarted() {
+        getListener().onLoadUserListStarted(getRequestCode());
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-
-        if (mUserList == null || (mUserList.isEmpty() && mCanLoadMore)) {
-            load(false);
-        }
+    protected final void onLoadFinished(boolean more, int count, boolean successful,
+                                        ResponseType response, ApiError error) {
+        onCallRawLoadFinished(more, count, successful, response, error);
     }
 
-    public void load(boolean loadMore, int count) {
+    protected abstract void onCallRawLoadFinished(boolean more, int count, boolean successful,
+                                                  ResponseType response, ApiError error);
 
-        if (mLoading || (loadMore && !mCanLoadMore)) {
-            return;
-        }
-
-        mLoading = true;
-        mLoadingMore = loadMore;
-        getListener().onLoadUserListStarted(getRequestCode(), loadMore);
-
-        Integer start = loadMore ? (mUserList != null ? mUserList.size() : 0) : null;
-        ApiRequest<T> request = onCreateRequest(start, count);
-        State state = new State(loadMore, count);
-        RequestFragment.startRequest(request, state, this);
-    }
-
-    public void load(boolean loadMore) {
-        load(loadMore, DEFAULT_COUNT_PER_LOAD);
-    }
-
-    protected abstract ApiRequest<T> onCreateRequest(Integer start, Integer count);
-
-    @Override
-    public void onVolleyResponse(int requestCode, final boolean successful, final T result,
-                                 final VolleyError error, final State requestState) {
-        postOnResumed(new Runnable() {
-            @Override
-            public void run() {
-                onDeliverLoadFinished(successful, result, error, requestState.loadMore,
-                        requestState.count);
-            }
-        });
-    }
-
-    protected abstract void onDeliverLoadFinished(boolean successful, T userList, VolleyError error,
-                                                  boolean loadMore, int count);
-
-    protected void onLoadFinished(boolean successful, List<User> userList, VolleyError error,
-                                  boolean loadMore, int count) {
-
-        mLoading = false;
-        mLoadingMore = false;
-        getListener().onLoadUserListFinished(getRequestCode(), loadMore);
-
+    protected void onRawLoadFinished(boolean more, int count, boolean successful,
+                                     List<SimpleUser> response, ApiError error) {
         if (successful) {
-            mCanLoadMore = userList.size() == count;
-            if (loadMore) {
-                mUserList.addAll(userList);
+            if (more) {
+                append(response);
+                getListener().onLoadUserListFinished(getRequestCode());
                 getListener().onUserListAppended(getRequestCode(),
-                        Collections.unmodifiableList(userList));
+                        Collections.unmodifiableList(response));
             } else {
-                mUserList = userList;
+                set(response);
+                getListener().onLoadUserListFinished(getRequestCode());
                 getListener().onUserListChanged(getRequestCode(),
-                        Collections.unmodifiableList(userList));
+                        Collections.unmodifiableList(get()));
             }
         } else {
+            getListener().onLoadUserListFinished(getRequestCode());
             getListener().onLoadUserListError(getRequestCode(), error);
         }
     }
@@ -122,28 +53,17 @@ public abstract class BaseUserListResource<T> extends ResourceFragment
         return (Listener) getTarget();
     }
 
-    static class State {
-
-        public boolean loadMore;
-        public int count;
-
-        public State(boolean loadMore, int count) {
-            this.loadMore = loadMore;
-            this.count = count;
-        }
-    }
-
     public interface Listener {
-        void onLoadUserListStarted(int requestCode, boolean loadMore);
-        void onLoadUserListFinished(int requestCode, boolean loadMore);
-        void onLoadUserListError(int requestCode, VolleyError error);
+        void onLoadUserListStarted(int requestCode);
+        void onLoadUserListFinished(int requestCode);
+        void onLoadUserListError(int requestCode, ApiError error);
         /**
          * @param newUserList Unmodifiable.
          */
-        void onUserListChanged(int requestCode, List<User> newUserList);
+        void onUserListChanged(int requestCode, List<SimpleUser> newUserList);
         /**
          * @param appendedUserList Unmodifiable.
          */
-        void onUserListAppended(int requestCode, List<User> appendedUserList);
+        void onUserListAppended(int requestCode, List<SimpleUser> appendedUserList);
     }
 }

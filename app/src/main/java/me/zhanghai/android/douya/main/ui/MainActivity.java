@@ -7,10 +7,10 @@ package me.zhanghai.android.douya.main.ui;
 
 import android.os.Bundle;
 import android.os.StrictMode;
-import android.support.annotation.Nullable;
-import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+import androidx.annotation.Nullable;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -21,18 +21,24 @@ import butterknife.ButterKnife;
 import me.zhanghai.android.douya.BuildConfig;
 import me.zhanghai.android.douya.R;
 import me.zhanghai.android.douya.account.util.AccountUtils;
+import me.zhanghai.android.douya.doumail.ui.DoumailUnreadCountFragment;
 import me.zhanghai.android.douya.home.HomeFragment;
 import me.zhanghai.android.douya.link.NotImplementedManager;
 import me.zhanghai.android.douya.navigation.ui.NavigationFragment;
 import me.zhanghai.android.douya.notification.ui.NotificationListFragment;
 import me.zhanghai.android.douya.scalpel.ScalpelHelperFragment;
 import me.zhanghai.android.douya.ui.ActionItemBadge;
-import me.zhanghai.android.douya.ui.DrawerManager;
 import me.zhanghai.android.douya.util.FragmentUtils;
 import me.zhanghai.android.douya.util.TransitionUtils;
 
-public class MainActivity extends AppCompatActivity
-        implements DrawerManager, NotificationListFragment.UnreadNotificationCountListener {
+public class MainActivity extends AppCompatActivity implements NavigationFragment.Host {
+
+    private static final String FRAGMENT_TAG_DOUMAIL_UNREAD_COUNT =
+            DoumailUnreadCountFragment.class.getName();
+
+    private static final String KEY_PREFIX = MainActivity.class.getName() + '.';
+
+    private static final String STATE_OPENED_DOUMAIL = KEY_PREFIX + "opened_doumail";
 
     @BindView(R.id.drawer)
     DrawerLayout mDrawerLayout;
@@ -41,11 +47,16 @@ public class MainActivity extends AppCompatActivity
     @BindView(R.id.container)
     FrameLayout mContainerLayout;
 
-    private MenuItem mNotificationMenu;
-    private int mUnreadNotificationCount;
+    private MenuItem mNotificationMenuItem;
+    private MenuItem mDoumailMenuItem;
 
     private NavigationFragment mNavigationFragment;
     private NotificationListFragment mNotificationListFragment;
+    private DoumailUnreadCountFragment mDoumailUnreadCountFragment;
+    // FIXME
+    private HomeFragment mMainFragment;
+
+    private boolean mOpenedDoumail;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,8 +79,12 @@ public class MainActivity extends AppCompatActivity
 
         super.onCreate(savedInstanceState);
 
-        if (!AccountUtils.ensureAccountAvailability(this)) {
+        if (!AccountUtils.ensureActiveAccountAvailability(this)) {
             return;
+        }
+
+        if (savedInstanceState != null) {
+            mOpenedDoumail = savedInstanceState.getBoolean(STATE_OPENED_DOUMAIL);
         }
 
         setContentView(R.layout.main_activity);
@@ -79,20 +94,45 @@ public class MainActivity extends AppCompatActivity
         ScalpelHelperFragment.attachTo(this);
 
         mNavigationFragment = FragmentUtils.findById(this, R.id.navigation_fragment);
-        mNotificationListFragment = FragmentUtils.findById(this, R.id.notification_list_fragment);
-        mNotificationListFragment.setUnreadNotificationCountListener(this);
 
         if (savedInstanceState == null) {
-            FragmentUtils.add(HomeFragment.newInstance(), this, R.id.container);
+            addFragments();
+        } else {
+            mMainFragment = FragmentUtils.findById(this, R.id.container);
+            mNotificationListFragment = FragmentUtils.findById(this, R.id.notification_list_drawer);
+            mDoumailUnreadCountFragment = FragmentUtils.findByTag(this,
+                    FRAGMENT_TAG_DOUMAIL_UNREAD_COUNT);
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        outState.putBoolean(STATE_OPENED_DOUMAIL, mOpenedDoumail);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        if (mOpenedDoumail) {
+            mDoumailUnreadCountFragment.refresh();
+            mOpenedDoumail = false;
         }
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+
         getMenuInflater().inflate(R.menu.main, menu);
-        mNotificationMenu = menu.findItem(R.id.action_notification);
-        ActionItemBadge.setup(mNotificationMenu, R.drawable.notifications_icon_white_24dp,
-                mUnreadNotificationCount, this);
+        mNotificationMenuItem = menu.findItem(R.id.action_notification);
+        ActionItemBadge.setup(mNotificationMenuItem, R.drawable.notifications_icon_white_24dp,
+                mNotificationListFragment.getUnreadCount(), this);
+        mDoumailMenuItem = menu.findItem(R.id.action_doumail);
+        ActionItemBadge.setup(mDoumailMenuItem, R.drawable.mail_icon_white_24dp,
+                mDoumailUnreadCountFragment.getUnreadCount(), this);
         return true;
     }
 
@@ -107,6 +147,7 @@ public class MainActivity extends AppCompatActivity
                 mDrawerLayout.openDrawer(mNotificationDrawer);
                 return true;
             case R.id.action_doumail:
+                mOpenedDoumail = true;
                 NotImplementedManager.openDoumail(this);
                 return true;
             case R.id.action_search:
@@ -137,28 +178,49 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void openDrawer(View drawerView) {
-        mDrawerLayout.openDrawer(drawerView);
+    public DrawerLayout getDrawer() {
+        return mDrawerLayout;
     }
 
     @Override
-    public void closeDrawer(View drawerView) {
-        mDrawerLayout.closeDrawer(drawerView);
+    public void reloadForActiveAccountChange() {
+        if (mMainFragment != null) {
+            FragmentUtils.remove(mMainFragment);
+        }
+        if (mNotificationListFragment != null) {
+            FragmentUtils.remove(mNotificationListFragment);
+        }
+        if (mDoumailUnreadCountFragment != null) {
+            FragmentUtils.remove(mDoumailUnreadCountFragment);
+        }
+        FragmentUtils.executePendingTransactions(this);
+        addFragments();
+        FragmentUtils.executePendingTransactions(this);
     }
 
-    @Override
-    public void onUnreadNotificationUpdate(int count) {
-        mUnreadNotificationCount = count;
-        if (mNotificationMenu != null) {
-            ActionItemBadge.update(mNotificationMenu, mUnreadNotificationCount);
+    private void addFragments() {
+        mMainFragment = HomeFragment.newInstance();
+        FragmentUtils.add(mMainFragment, this, R.id.container);
+        mNotificationListFragment = NotificationListFragment.newInstance();
+        FragmentUtils.add(mNotificationListFragment, this, R.id.notification_list_drawer);
+        mDoumailUnreadCountFragment = DoumailUnreadCountFragment.newInstance();
+        FragmentUtils.add(mDoumailUnreadCountFragment, this, FRAGMENT_TAG_DOUMAIL_UNREAD_COUNT);
+    }
+
+    public void onNotificationUnreadCountUpdate(int count) {
+        if (mNotificationMenuItem != null) {
+            ActionItemBadge.update(mNotificationMenuItem, count);
         }
     }
 
-    private void onShowSettings() {
-
+    public void onDoumailUnreadCountUpdate(int count) {
+        if (mDoumailMenuItem != null) {
+            ActionItemBadge.update(mDoumailMenuItem, count);
+        }
     }
 
-    public void refreshNotificationList() {
+    public void onRefresh() {
         mNotificationListFragment.refresh();
+        mDoumailUnreadCountFragment.refresh();
     }
 }

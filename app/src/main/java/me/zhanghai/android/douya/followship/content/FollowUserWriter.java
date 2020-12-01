@@ -6,37 +6,37 @@
 package me.zhanghai.android.douya.followship.content;
 
 import android.content.Context;
-import android.support.annotation.Keep;
 import android.text.TextUtils;
 
-import com.android.volley.VolleyError;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import me.zhanghai.android.douya.R;
-import me.zhanghai.android.douya.content.ResourceWriter;
-import me.zhanghai.android.douya.eventbus.UserInfoUpdatedEvent;
+import me.zhanghai.android.douya.content.RequestResourceWriter;
 import me.zhanghai.android.douya.eventbus.EventBusUtils;
-import me.zhanghai.android.douya.eventbus.UserInfoWriteFinishedEvent;
-import me.zhanghai.android.douya.eventbus.UserInfoWriteStartedEvent;
-import me.zhanghai.android.douya.network.Request;
+import me.zhanghai.android.douya.eventbus.UserUpdatedEvent;
+import me.zhanghai.android.douya.eventbus.UserWriteFinishedEvent;
+import me.zhanghai.android.douya.eventbus.UserWriteStartedEvent;
 import me.zhanghai.android.douya.network.api.ApiContract.Response.Error.Codes;
 import me.zhanghai.android.douya.network.api.ApiError;
-import me.zhanghai.android.douya.network.api.ApiRequests;
-import me.zhanghai.android.douya.network.api.info.apiv2.UserInfo;
+import me.zhanghai.android.douya.network.api.ApiRequest;
+import me.zhanghai.android.douya.network.api.ApiService;
+import me.zhanghai.android.douya.network.api.info.apiv2.User;
 import me.zhanghai.android.douya.util.LogUtils;
 import me.zhanghai.android.douya.util.ToastUtils;
 
-class FollowUserWriter extends ResourceWriter<FollowUserWriter, UserInfo> {
+class FollowUserWriter extends RequestResourceWriter<FollowUserWriter, User> {
 
     private String mUserIdOrUid;
-    private UserInfo mUserInfo;
+    private User mUser;
     private boolean mFollow;
 
-    private FollowUserWriter(String userIdOrUid, UserInfo userInfo, boolean follow,
+    private FollowUserWriter(String userIdOrUid, User user, boolean follow,
                              FollowUserManager manager) {
         super(manager);
 
         mUserIdOrUid = userIdOrUid;
-        mUserInfo = userInfo;
+        mUser = user;
         mFollow = follow;
 
         EventBusUtils.register(this);
@@ -46,8 +46,8 @@ class FollowUserWriter extends ResourceWriter<FollowUserWriter, UserInfo> {
         this(userIdOrUid, null, follow, manager);
     }
 
-    FollowUserWriter(UserInfo userInfo, boolean follow, FollowUserManager manager) {
-        this(userInfo.getIdOrUid(), userInfo, follow, manager);
+    FollowUserWriter(User user, boolean follow, FollowUserManager manager) {
+        this(user.getIdOrUid(), user, follow, manager);
     }
 
     public String getUserIdOrUid() {
@@ -55,7 +55,7 @@ class FollowUserWriter extends ResourceWriter<FollowUserWriter, UserInfo> {
     }
 
     public boolean hasUserIdOrUid(String userIdOrUid) {
-        return mUserInfo != null ? mUserInfo.hasIdOrUid(userIdOrUid)
+        return mUser != null ? mUser.isIdOrUid(userIdOrUid)
                 : TextUtils.equals(mUserIdOrUid, userIdOrUid);
     }
 
@@ -64,15 +64,15 @@ class FollowUserWriter extends ResourceWriter<FollowUserWriter, UserInfo> {
     }
 
     @Override
-    protected Request<UserInfo> onCreateRequest() {
-        return ApiRequests.newFollowshipRequest(mUserIdOrUid, mFollow, getContext());
+    protected ApiRequest<User> onCreateRequest() {
+        return ApiService.getInstance().follow(mUserIdOrUid, mFollow);
     }
 
     @Override
     public void onStart() {
         super.onStart();
 
-        EventBusUtils.postAsync(new UserInfoWriteStartedEvent(mUserIdOrUid, this));
+        EventBusUtils.postAsync(new UserWriteStartedEvent(mUserIdOrUid, this));
     }
 
     @Override
@@ -83,18 +83,18 @@ class FollowUserWriter extends ResourceWriter<FollowUserWriter, UserInfo> {
     }
 
     @Override
-    public void onResponse(UserInfo response) {
+    public void onResponse(User response) {
 
         ToastUtils.show(mFollow ? R.string.user_follow_successful
                 : R.string.user_unfollow_successful, getContext());
 
-        EventBusUtils.postAsync(new UserInfoUpdatedEvent(response, this));
+        EventBusUtils.postAsync(new UserUpdatedEvent(response, this));
 
         stopSelf();
     }
 
     @Override
-    public void onErrorResponse(VolleyError error) {
+    public void onErrorResponse(ApiError error) {
 
         LogUtils.e(error.toString());
         Context context = getContext();
@@ -103,7 +103,7 @@ class FollowUserWriter extends ResourceWriter<FollowUserWriter, UserInfo> {
                 ApiError.getErrorString(error, context)), context);
 
         boolean notified = false;
-        if (mUserInfo != null && error instanceof ApiError) {
+        if (mUser != null && error instanceof ApiError) {
             // Correct our local state if needed.
             ApiError apiError = (ApiError) error;
             Boolean shouldBeFollowed = null;
@@ -113,30 +113,30 @@ class FollowUserWriter extends ResourceWriter<FollowUserWriter, UserInfo> {
                 shouldBeFollowed = false;
             }
             if (shouldBeFollowed != null) {
-                mUserInfo.fixFollowed(shouldBeFollowed);
-                EventBusUtils.postAsync(new UserInfoUpdatedEvent(mUserInfo, this));
+                mUser.fixFollowed(shouldBeFollowed);
+                EventBusUtils.postAsync(new UserUpdatedEvent(mUser, this));
                 notified = true;
             }
         }
         if (!notified) {
             // Must notify to reset pending status. Off-screen items also needs to be invalidated.
-            EventBusUtils.postAsync(new UserInfoWriteFinishedEvent(mUserIdOrUid, this));
+            EventBusUtils.postAsync(new UserWriteFinishedEvent(mUserIdOrUid, this));
         }
 
         stopSelf();
     }
 
-    @Keep
-    public void onEventMainThread(UserInfoUpdatedEvent event) {
+    @Subscribe(threadMode = ThreadMode.POSTING)
+    public void onUserUpdated(UserUpdatedEvent event) {
 
         if (event.isFromMyself(this)) {
             return;
         }
 
         //noinspection deprecation
-        if (event.userInfo.hasIdOrUid(mUserIdOrUid)) {
-            mUserIdOrUid = event.userInfo.getIdOrUid();
-            mUserInfo = event.userInfo;
+        if (event.mUser.isIdOrUid(mUserIdOrUid)) {
+            mUserIdOrUid = event.mUser.getIdOrUid();
+            mUser = event.mUser;
         }
     }
 }

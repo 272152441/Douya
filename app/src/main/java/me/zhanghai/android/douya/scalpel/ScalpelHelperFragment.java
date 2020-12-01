@@ -7,11 +7,13 @@ package me.zhanghai.android.douya.scalpel;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.support.annotation.Keep;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.FragmentManager;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.fragment.app.FragmentManager;
+
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import me.zhanghai.android.douya.app.RetainedFragment;
 import me.zhanghai.android.douya.eventbus.EventBusUtils;
@@ -26,7 +28,7 @@ public class ScalpelHelperFragment extends RetainedFragment {
     private boolean mInjected;
 
     /**
-     * @deprecated Use {@link #attachTo(Fragment)} instead.
+     * @deprecated Use {@link #attachToActivity(Fragment)} instead.
      */
     public static ScalpelHelperFragment attachTo(FragmentActivity activity) {
         FragmentManager fragmentManager = activity.getSupportFragmentManager();
@@ -41,7 +43,7 @@ public class ScalpelHelperFragment extends RetainedFragment {
         return fragment;
     }
 
-    public static ScalpelHelperFragment attachTo(Fragment fragment) {
+    public static ScalpelHelperFragment attachToActivity(Fragment fragment) {
         //noinspection deprecation
         return attachTo(fragment.getActivity());
     }
@@ -96,8 +98,8 @@ public class ScalpelHelperFragment extends RetainedFragment {
         ScalpelUtils.setEnabled(getActivity(), true);
     }
 
-    @Keep
-    public void onEventMainThread(SetEnabledEvent event) {
+    @Subscribe(threadMode = ThreadMode.POSTING)
+    public void onSetEnabled(SetEnabledEvent event) {
         setEnabledForActivity(event.enabled);
     }
 

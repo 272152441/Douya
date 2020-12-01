@@ -5,7 +5,7 @@
 
 package me.zhanghai.android.douya.ui;
 
-import android.support.v7.widget.RecyclerView;
+import androidx.recyclerview.widget.RecyclerView;
 
 public abstract class OnVerticalScrollListener extends RecyclerView.OnScrollListener {
 
@@ -21,19 +21,14 @@ public abstract class OnVerticalScrollListener extends RecyclerView.OnScrollList
         } else if (dy > 0) {
             onScrolledDown(dy);
         }
+        onScrolled(dy);
     }
 
-    public void onScrolledUp(int dy) {
-        onScrolledUp();
-    }
+    public void onScrolled(int dy) {}
 
-    public void onScrolledDown(int dy) {
-        onScrolledDown();
-    }
+    public void onScrolledUp(int dy) {}
 
-    public void onScrolledUp() {}
-
-    public void onScrolledDown() {}
+    public void onScrolledDown(int dy) {}
 
     public void onScrolledToTop() {}
 

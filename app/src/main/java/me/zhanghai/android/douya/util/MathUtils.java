@@ -9,15 +9,15 @@ public class MathUtils {
 
     private MathUtils() {}
 
-    public static int clamp(int value, int min, int max) {
+    public static int constrain(int value, int min, int max) {
         return value < min ? min : value > max ? max : value;
     }
 
-    public static float clamp(float value, float min, float max) {
+    public static float constrain(float value, float min, float max) {
         return value < min ? min : value > max ? max : value;
     }
 
-    public static int lerp(int start, int end, float fraction) {
+    public static int lerpInt(int start, int end, float fraction) {
         return (int) (start + (end - start) * fraction);
     }
 

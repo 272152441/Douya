@@ -5,77 +5,22 @@
 
 package me.zhanghai.android.douya.network.api.info.frodo;
 
-import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.text.TextUtils;
 
 import com.google.gson.annotations.SerializedName;
 
 import java.util.ArrayList;
 
-import me.zhanghai.android.douya.R;
-
 public class CollectedItem implements Parcelable {
 
-    public enum State {
-
-        TODO("wish", R.string.item_todo_format),
-        DOING("do", R.string.item_doing_format),
-        DONE("collect", R.string.item_done_format);
-
-        private String apiString;
-        private int formatRes;
-
-        State(String apiString, int formatRes) {
-            this.apiString = apiString;
-            this.formatRes = formatRes;
-        }
-
-        public static State ofString(String apiString, State defaultValue) {
-            for (State state : State.values()) {
-                if (TextUtils.equals(state.apiString, apiString)) {
-                    return state;
-                }
-            }
-            return defaultValue;
-        }
-
-        public static State ofString(String apiString) {
-            return ofString(apiString, DONE);
-        }
-
-        /**
-         * @deprecated HACK-only.
-         */
-        public String getApiString() {
-            return apiString;
-        }
-
-        public int getFormatRes() {
-            return formatRes;
-        }
-
-        public String getFormat(Context context) {
-            return context.getString(formatRes);
-        }
-
-        public String getString(String action, Context context) {
-            return context.getString(formatRes, action);
-        }
-
-        public String getString(Item.Type type, Context context) {
-            return getString(type.getAction(context), context);
-        }
-    }
-
     @SerializedName("attend_time")
-    public String attendTime;
+    public String attendanceTime;
 
     public String comment;
 
     @SerializedName("create_time")
-    public String createdAt;
+    public String creationTime;
 
     @SerializedName("done_index")
     public int doneIndex;
@@ -90,7 +35,7 @@ public class CollectedItem implements Parcelable {
     @SerializedName("popular_tags")
     public ArrayList<String> popularTags = new ArrayList<>();
 
-    public Rating rating;
+    public SimpleRating rating;
 
     @SerializedName("sharing_url")
     public String shareUrl;
@@ -105,16 +50,16 @@ public class CollectedItem implements Parcelable {
     public boolean isVoted;
 
     @SerializedName("subject")
-    public Item item;
+    public CollectableItem item;
 
     public ArrayList<String> tags = new ArrayList<>();
 
     @SerializedName("vote_count")
     public int voteCount;
 
-    public State getState() {
+    public ItemCollectionState getState() {
         //noinspection deprecation
-        return State.ofString(state);
+        return ItemCollectionState.ofString(state);
     }
 
 
@@ -133,20 +78,20 @@ public class CollectedItem implements Parcelable {
     public CollectedItem() {}
 
     protected CollectedItem(Parcel in) {
-        attendTime = in.readString();
+        attendanceTime = in.readString();
         comment = in.readString();
-        createdAt = in.readString();
+        creationTime = in.readString();
         doneIndex = in.readInt();
         id = in.readLong();
         collectedIndex = in.readInt();
         platforms = in.createTypedArrayList(GamePlatform.CREATOR);
         popularTags = in.createStringArrayList();
-        rating = in.readParcelable(Rating.class.getClassLoader());
+        rating = in.readParcelable(SimpleRating.class.getClassLoader());
         shareUrl = in.readString();
         //noinspection deprecation
         state = in.readString();
         isVoted = in.readByte() != 0;
-        item = in.readParcelable(Item.class.getClassLoader());
+        item = in.readParcelable(CollectableItem.class.getClassLoader());
         tags = in.createStringArrayList();
         voteCount = in.readInt();
     }
@@ -158,9 +103,9 @@ public class CollectedItem implements Parcelable {
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-        dest.writeString(attendTime);
+        dest.writeString(attendanceTime);
         dest.writeString(comment);
-        dest.writeString(createdAt);
+        dest.writeString(creationTime);
         dest.writeInt(doneIndex);
         dest.writeLong(id);
         dest.writeInt(collectedIndex);

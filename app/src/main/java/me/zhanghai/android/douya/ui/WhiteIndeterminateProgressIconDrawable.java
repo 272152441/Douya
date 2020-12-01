@@ -15,11 +15,11 @@ import android.graphics.PixelFormat;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Animatable;
 import android.graphics.drawable.Drawable;
-import android.support.annotation.ColorInt;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.ColorInt;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
-import me.zhanghai.android.materialprogressbar.IndeterminateProgressDrawable;
+import me.zhanghai.android.materialprogressbar.IndeterminateCircularProgressDrawable;
 
 public class WhiteIndeterminateProgressIconDrawable extends Drawable implements Animatable {
 
@@ -148,7 +148,7 @@ public class WhiteIndeterminateProgressIconDrawable extends Drawable implements 
         mProgressDrawable.draw(canvas);
     }
 
-    public class ProgressDrawable extends IndeterminateProgressDrawable {
+    public class ProgressDrawable extends IndeterminateCircularProgressDrawable {
 
         public ProgressDrawable(Context context) {
             super(context);
